@@ -103,6 +103,12 @@
         <input id="p-busca" placeholder="Buscar peça pelo nome">
         <div id="lista-pecas" style="margin-top:8px"></div>
       </div>
+      <div class="card">
+        <h2>Importar peças do sistema antigo</h2>
+        <p class="vazio" style="font-size:13px">Escolha o arquivo <b>dados_antigos_pecas.json</b>. As peças são adicionadas ao catálogo. Se já existirem, são apenas atualizadas, sem duplicar.</p>
+        <input id="imp-arquivo" type="file" accept=".json,application/json">
+        <button id="imp-botao">Importar peças</button>
+      </div>
     </section>
 
     <!-- ABA VENDAS -->
@@ -184,8 +190,8 @@
   ];
   const PADROES = {
     pesoG: "", filamentoKg: 120, tempoHoras: "", tempoMinutos: "", taxaFalha: 5,
-    potenciaW: 200, valorKwh: 0.95, horaMaquina: 2.5, valorHoraMO: 25,
-    minutosMO: 15, extras: 2, margem: 80
+    potenciaW: 200, valorKwh: 1.2, horaMaquina: 1.5, valorHoraMO: 0,
+    minutosMO: 0, extras: 0, margem: 80
   };
 
   // ---------- AJUDANTES ----------
@@ -490,6 +496,27 @@
       window.scrollTo({ top: 0 });
     };
   });
+
+  // ---------- IMPORTAR PEÇAS DO SISTEMA ANTIGO ----------
+  async function importarPecasAntigas() {
+    const arquivo = $("imp-arquivo").files[0];
+    if (!arquivo) { toast("Escolha o arquivo dados_antigos_pecas.json primeiro."); return; }
+    try {
+      const dados = JSON.parse(await arquivo.text());
+      const lista = Array.isArray(dados.pecas) ? dados.pecas : null;
+      if (!lista) { toast("Arquivo inválido: não encontrei a lista de peças."); return; }
+      if (!confirm(`Importar ${lista.length} peças? Peças com o mesmo código serão atualizadas.`)) return;
+      lista.forEach(p => {
+        const { id, ...resto } = p;
+        setDoc(doc(db, "pecas", id), resto).catch(e => toast("Erro na importação: " + e.message));
+      });
+      toast(`${lista.length} peças enviadas. Confira na lista abaixo.`);
+      $("imp-arquivo").value = "";
+    } catch (e) {
+      toast("Não consegui ler o arquivo: " + e.message);
+    }
+  }
+  $("imp-botao").onclick = importarPecasAntigas;
 
   // ---------- EVENTOS ----------
   CAMPOS.forEach(([id]) => $(id).addEventListener("input", atualizarResumo));
