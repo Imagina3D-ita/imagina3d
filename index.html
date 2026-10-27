@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Imagina 3D">
+<link rel="manifest" href="manifest.json">
+<title>Imagina 3D</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: #111827; color: #e5e7eb; min-height: 100vh; }
+  .hidden { display: none !important; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 16px; padding-top: calc(12px + env(safe-area-inset-top)); background: #1f2937; position: sticky; top: 0; z-index: 5; }
+  h1 { font-size: 20px; margin: 0; color: #f97316; }
+  h2 { font-size: 17px; margin: 0 0 12px; }
+  #status { font-size: 12px; color: #9ca3af; flex: 1; text-align: center; }
+  nav { display: flex; gap: 8px; padding: 12px 16px 0; max-width: 900px; margin: 0 auto; }
+  nav button { flex: 1; }
+  nav button.ativa { background: #f97316; }
+  nav button:not(.ativa) { background: #374151; }
+  main { padding: 12px 16px 60px; max-width: 900px; margin: 0 auto; }
+  .card { background: #1f2937; border-radius: 14px; padding: 16px; margin-bottom: 16px; }
+  label { display: block; font-size: 13px; color: #9ca3af; margin-bottom: 10px; }
+  input, select { display: block; width: 100%; margin-top: 4px; padding: 12px; font-size: 16px; border-radius: 10px; border: 1px solid #374151; background: #111827; color: #fff; }
+  .grid { display: grid; grid-template-columns: 1fr; gap: 0 12px; }
+  @media (min-width: 600px) { .grid { grid-template-columns: 1fr 1fr; } }
+  button { background: #f97316; color: #fff; border: 0; border-radius: 10px; padding: 12px 16px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 8px; margin-right: 6px; }
+  button.sec { background: #374151; }
+  button.perigo { background: #7f1d1d; }
+  .item { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid #374151; }
+  .item small { display: block; color: #9ca3af; font-size: 12px; margin-top: 2px; }
+  .dir { text-align: right; }
+  .acoes { display: flex; gap: 6px; justify-content: flex-end; }
+  .acoes button { padding: 6px 10px; font-size: 12px; margin-top: 6px; }
+  .pend { color: #fbbf24 !important; }
+  .resumo { background: #111827; border-radius: 10px; padding: 12px; font-size: 14px; margin: 8px 0; line-height: 1.8; }
+  .vazio { color: #6b7280; }
+  .entrada { color: #34d399; }
+  .saida { color: #f87171; }
+  .login { max-width: 380px; margin: 12vh auto 0; }
+  .msg { color: #fca5a5; font-size: 14px; min-height: 20px; }
+  #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(150px); background: #f97316; color: #fff; padding: 12px 18px; border-radius: 10px; transition: transform .3s; max-width: 92%; text-align: center; z-index: 9; }
+  #toast.mostrar { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- TELA DE LOGIN -->
+<div id="login">
+  <main>
+    <div class="card login">
+      <h1>Imagina 3D</h1>
+      <p style="color:#9ca3af;font-size:14px">Entre com o e-mail e a senha da loja.</p>
+      <label>E-mail<input id="l-email" type="email" autocomplete="username"></label>
+      <label>Senha<input id="l-senha" type="password" autocomplete="current-password"></label>
+      <button id="btn-entrar">Entrar</button>
+      <p id="l-msg" class="msg"></p>
+    </div>
+  </main>
+</div>
+
+<!-- SISTEMA -->
+<div id="app" class="hidden">
+  <header>
+    <h1>Imagina 3D</h1>
+    <div id="status"></div>
+    <button id="btn-sair" class="sec">Sair</button>
+  </header>
+
+  <nav>
+    <button data-aba="pecas" class="ativa">Peças</button>
+    <button data-aba="vendas">Vendas</button>
+    <button data-aba="caixa">Caixa</button>
+  </nav>
+
+  <main>
+    <!-- ABA PEÇAS -->
+    <section id="aba-pecas">
+      <div class="card">
+        <h2 id="titulo-form">Nova peça</h2>
+        <label>Nome da peça<input id="p-nome"></label>
+        <div class="grid">
+          <label>Peso (gramas)<input id="p-peso" inputmode="decimal"></label>
+          <label>Valor do filamento (R$ por kg)<input id="p-filamento" inputmode="decimal"></label>
+          <label>Tempo de impressão (horas)<input id="p-horas" inputmode="decimal"></label>
+          <label>Tempo de impressão (minutos)<input id="p-minutos" inputmode="decimal"></label>
+          <label>Perda/falha (%)<input id="p-falha" inputmode="decimal"></label>
+          <label>Potência da impressora (W)<input id="p-potencia" inputmode="decimal"></label>
+          <label>Valor da energia (R$ por kWh)<input id="p-kwh" inputmode="decimal"></label>
+          <label>Custo da máquina (R$ por hora)<input id="p-maquina" inputmode="decimal"></label>
+          <label>Sua hora de trabalho (R$ por hora)<input id="p-hmo" inputmode="decimal"></label>
+          <label>Tempo de trabalho (minutos)<input id="p-minmo" inputmode="decimal"></label>
+          <label>Custos extras (R$)<input id="p-extras" inputmode="decimal"></label>
+          <label>Lucro desejado (%)<input id="p-margem" inputmode="decimal"></label>
+        </div>
+        <div class="resumo" id="p-resumo"></div>
+        <button id="p-salvar">Salvar peça</button>
+        <button id="p-limpar" class="sec">Limpar</button>
+      </div>
+      <div class="card">
+        <input id="p-busca" placeholder="Buscar peça pelo nome">
+        <div id="lista-pecas" style="margin-top:8px"></div>
+      </div>
+    </section>
+
+    <!-- ABA VENDAS -->
+    <section id="aba-vendas" class="hidden">
+      <div class="card">
+        <h2>Registrar venda</h2>
+        <label>Peça<select id="v-peca"></select></label>
+        <div class="grid">
+          <label>Quantidade<input id="v-qtd" inputmode="numeric" value="1"></label>
+          <label>Valor unitário (R$)<input id="v-valor" inputmode="decimal"></label>
+        </div>
+        <div class="resumo" id="v-total"></div>
+        <button id="v-registrar">Registrar venda</button>
+      </div>
+      <div class="card">
+        <h2>Vendas registradas</h2>
+        <div id="lista-vendas"></div>
+      </div>
+    </section>
+
+    <!-- ABA CAIXA -->
+    <section id="aba-caixa" class="hidden">
+      <div class="card" id="c-saldo-box"></div>
+      <div class="card">
+        <h2>Novo lançamento</h2>
+        <label>Tipo
+          <select id="c-tipo">
+            <option value="entrada">Entrada (dinheiro recebido)</option>
+            <option value="saida">Saída (gasto)</option>
+          </select>
+        </label>
+        <label>Descrição<input id="c-desc"></label>
+        <label>Valor (R$)<input id="c-valor" inputmode="decimal"></label>
+        <button id="c-salvar">Lançar</button>
+      </div>
+      <div class="card">
+        <h2>Movimentações</h2>
+        <div id="lista-caixa"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  // ---------- CONFIGURAÇÃO ----------
+  const firebaseConfig = {
+    apiKey: "AIzaSyDC1TjVGDiDsDZybeHGcPfoRPc1rsuxWAM",
+    authDomain: "imagina3d-754d2.firebaseapp.com",
+    projectId: "imagina3d-754d2",
+    storageBucket: "imagina3d-754d2.firebasestorage.app",
+    messagingSenderId: "303583419892",
+    appId: "1:303583419892:web:f96d00e8aeaa292da06da1"
+  };
+  const EMAIL_LOJA = "imagina3d.ita@gmail.com";
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  // Guarda os dados no aparelho e envia para a nuvem quando há internet
+  const db = initializeFirestore(app, {
+    localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+  });
+
+  // ---------- ESTADO ----------
+  let pecas = [], vendas = [], caixa = [];
+  let editId = null;
+  let unsubs = [];
+
+  const CAMPOS = [
+    ["p-peso", "pesoG"], ["p-filamento", "filamentoKg"], ["p-horas", "tempoHoras"],
+    ["p-minutos", "tempoMinutos"], ["p-falha", "taxaFalha"], ["p-potencia", "potenciaW"],
+    ["p-kwh", "valorKwh"], ["p-maquina", "horaMaquina"], ["p-hmo", "valorHoraMO"],
+    ["p-minmo", "minutosMO"], ["p-extras", "extras"], ["p-margem", "margem"]
+  ];
+  const PADROES = {
+    pesoG: "", filamentoKg: 120, tempoHoras: "", tempoMinutos: "", taxaFalha: 5,
+    potenciaW: 200, valorKwh: 0.95, horaMaquina: 2.5, valorHoraMO: 25,
+    minutosMO: 15, extras: 2, margem: 80
+  };
+
+  // ---------- AJUDANTES ----------
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const num = v => { const n = parseFloat(String(v ?? "").trim().replace(",", ".")); return isNaN(n) ? 0 : n; };
+  const round2 = v => Math.round(v * 100) / 100;
+  const brl = v => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const paraCampo = v => (v === "" || v === null || v === undefined) ? "" : String(v).replace(".", ",");
+  const hoje = () => {
+    const d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  };
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("mostrar");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => t.classList.remove("mostrar"), 3500);
+  }
+
+  // ---------- CÁLCULO DO PREÇO ----------
+  function calcular(p) {
+    const horas = num(p.tempoHoras) + num(p.tempoMinutos) / 60;
+    const fator = 1 + num(p.taxaFalha) / 100;
+    const material = (num(p.pesoG) / 1000) * num(p.filamentoKg) * fator;
+    const energia = (num(p.potenciaW) / 1000) * horas * num(p.valorKwh);
+    const maquina = num(p.horaMaquina) * horas;
+    const mao = num(p.valorHoraMO) * num(p.minutosMO) / 60;
+    const extras = num(p.extras);
+    const custo = material + energia + maquina + mao + extras;
+    const venda = custo * (1 + num(p.margem) / 100);
+    return { custo, venda, lucro: venda - custo };
+  }
+
+  // ---------- FORMULÁRIO DE PEÇA ----------
+  function lerForm() {
+    const p = { nome: $("p-nome").value.trim() };
+    CAMPOS.forEach(([id, k]) => p[k] = num($(id).value));
+    return p;
+  }
+  function atualizarResumo() {
+    const c = calcular(lerForm());
+    $("p-resumo").innerHTML = `Custo: <b>${brl(c.custo)}</b><br>Preço de venda sugerido: <b>${brl(c.venda)}</b><br>Lucro por unidade: <b>${brl(c.lucro)}</b>`;
+  }
+  function limparForm() {
+    editId = null;
+    $("titulo-form").textContent = "Nova peça";
+    $("p-nome").value = "";
+    CAMPOS.forEach(([id, k]) => $(id).value = paraCampo(PADROES[k]));
+    atualizarResumo();
+  }
+  function editarPeca(p) {
+    editId = p.id;
+    $("titulo-form").textContent = "Editando: " + p.nome;
+    $("p-nome").value = p.nome || "";
+    CAMPOS.forEach(([id, k]) => $(id).value = paraCampo(p[k] ?? PADROES[k] ?? ""));
+    atualizarResumo();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  function salvarPeca() {
+    const p = lerForm();
+    if (!p.nome) { toast("Digite o nome da peça."); return; }
+    const c = calcular(p);
+    const dados = { ...p, custo: round2(c.custo), precoVenda: round2(c.venda), atualizadoEm: Date.now() };
+    const ref = editId ? doc(db, "pecas", editId) : doc(collection(db, "pecas"));
+    setDoc(ref, dados).catch(e => toast("Erro ao salvar: " + e.message));
+    toast("Peça salva. Sem internet, será enviada quando a conexão voltar.");
+    limparForm();
+  }
+  function excluirPeca(id) {
+    if (!confirm("Excluir esta peça? As vendas antigas dela continuam registradas.")) return;
+    deleteDoc(doc(db, "pecas", id)).catch(e => toast("Erro ao excluir: " + e.message));
+  }
+
+  function renderPecas() {
+    const busca = $("p-busca").value.trim().toLowerCase();
+    const lista = pecas
+      .filter(p => (p.nome || "").toLowerCase().includes(busca))
+      .sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"));
+    $("lista-pecas").innerHTML = lista.length ? lista.map(p => `
+      <div class="item">
+        <div>
+          <b>${esc(p.nome)}</b>
+          <small>${p.pesoG}g · ${p.tempoHoras}h ${p.tempoMinutos}min</small>
+          ${p._pend ? '<small class="pend">⏳ aguardando envio</small>' : ""}
+        </div>
+        <div class="dir">
+          <b class="entrada">${brl(p.precoVenda)}</b>
+          <small>custo ${brl(p.custo)}</small>
+          <div class="acoes">
+            <button class="sec" data-editar="${p.id}">Editar</button>
+            <button class="perigo" data-excluir="${p.id}">Excluir</button>
+          </div>
+        </div>
+      </div>`).join("") : '<p class="vazio">Nenhuma peça encontrada.</p>';
+
+    // Atualiza a lista de peças da aba Vendas
+    const atual = $("v-peca").value;
+    $("v-peca").innerHTML = pecas
+      .slice()
+      .sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"))
+      .map(p => `<option value="${p.id}">${esc(p.nome)} — ${brl(p.precoVenda)}</option>`).join("");
+    if (atual && pecas.some(p => p.id === atual)) $("v-peca").value = atual;
+    if (!$("v-valor").value) preencherValorDaPeca();
+    atualizarTotalVenda();
+  }
+
+  // ---------- VENDAS ----------
+  function preencherValorDaPeca() {
+    const p = pecas.find(x => x.id === $("v-peca").value);
+    if (p) $("v-valor").value = paraCampo(p.precoVenda);
+  }
+  function atualizarTotalVenda() {
+    const qtd = Math.max(1, Math.floor(num($("v-qtd").value) || 1));
+    const total = qtd * num($("v-valor").value);
+    $("v-total").innerHTML = `Total da venda: <b>${brl(total)}</b>`;
+  }
+  function registrarVenda() {
+    const p = pecas.find(x => x.id === $("v-peca").value);
+    if (!p) { toast("Cadastre uma peça antes de registrar a venda."); return; }
+    const qtd = Math.max(1, Math.floor(num($("v-qtd").value) || 1));
+    const valor = num($("v-valor").value);
+    if (valor <= 0) { toast("Informe o valor unitário."); return; }
+    setDoc(doc(collection(db, "vendas")), {
+      pecaId: p.id,
+      pecaNome: p.nome,
+      qtd,
+      valorUnit: round2(valor),
+      total: round2(qtd * valor),
+      data: hoje(),
+      criadoEm: Date.now()
+    }).catch(e => toast("Erro ao registrar: " + e.message));
+    toast("Venda registrada.");
+    $("v-qtd").value = "1";
+    preencherValorDaPeca();
+    atualizarTotalVenda();
+  }
+  function excluirVenda(id) {
+    if (!confirm("Excluir esta venda? O valor sai do caixa.")) return;
+    deleteDoc(doc(db, "vendas", id)).catch(e => toast("Erro ao excluir: " + e.message));
+  }
+  function renderVendas() {
+    const lista = vendas.slice().sort((a, b) => (b.criadoEm || 0) - (a.criadoEm || 0));
+    $("lista-vendas").innerHTML = lista.length ? lista.map(v => `
+      <div class="item">
+        <div>
+          <b>${esc(v.pecaNome)}</b>
+          <small>${esc(v.data)} · ${v.qtd}x ${brl(v.valorUnit)}</small>
+          ${v._pend ? '<small class="pend">⏳ aguardando envio</small>' : ""}
+        </div>
+        <div class="dir">
+          <b class="entrada">${brl(v.total)}</b>
+          <div class="acoes"><button class="perigo" data-excluir-venda="${v.id}">Excluir</button></div>
+        </div>
+      </div>`).join("") : '<p class="vazio">Nenhuma venda registrada.</p>';
+  }
+
+  // ---------- CAIXA ----------
+  function lancarCaixa() {
+    const desc = $("c-desc").value.trim();
+    const valor = num($("c-valor").value);
+    if (!desc) { toast("Digite a descrição."); return; }
+    if (valor <= 0) { toast("Informe o valor."); return; }
+    setDoc(doc(collection(db, "caixa")), {
+      tipo: $("c-tipo").value,
+      descricao: desc,
+      valor: round2(valor),
+      data: hoje(),
+      criadoEm: Date.now()
+    }).catch(e => toast("Erro ao lançar: " + e.message));
+    toast("Lançamento registrado.");
+    $("c-desc").value = "";
+    $("c-valor").value = "";
+  }
+  function excluirLancamento(id) {
+    if (!confirm("Excluir este lançamento?")) return;
+    deleteDoc(doc(db, "caixa", id)).catch(e => toast("Erro ao excluir: " + e.message));
+  }
+  function renderCaixa() {
+    const totalVendas = vendas.reduce((s, v) => s + num(v.total), 0);
+    const entradas = caixa.filter(c => c.tipo === "entrada").reduce((s, c) => s + num(c.valor), 0);
+    const saidas = caixa.filter(c => c.tipo === "saida").reduce((s, c) => s + num(c.valor), 0);
+    const saldo = totalVendas + entradas - saidas;
+    const mes = hoje().slice(0, 7);
+    const vendidoMes = vendas
+      .filter(v => String(v.data || "").startsWith(mes))
+      .reduce((s, v) => s + num(v.total), 0);
+
+    $("c-saldo-box").innerHTML = `
+      <div>Saldo atual</div>
+      <div style="font-size:28px;font-weight:700" class="${saldo < 0 ? "saida" : "entrada"}">${brl(saldo)}</div>
+      <div class="resumo">Vendido neste mês: <b>${brl(vendidoMes)}</b></div>`;
+
+    const movimentos = [
+      ...vendas.map(v => ({
+        id: v.id, tipo: "venda", data: v.data, criadoEm: v.criadoEm || 0,
+        descricao: `Venda: ${v.pecaNome} (${v.qtd}x)`, valor: num(v.total), pend: v._pend
+      })),
+      ...caixa.map(c => ({
+        id: c.id, tipo: c.tipo, data: c.data, criadoEm: c.criadoEm || 0,
+        descricao: c.descricao, valor: num(c.valor), pend: c._pend
+      }))
+    ].sort((a, b) => b.criadoEm - a.criadoEm);
+
+    $("lista-caixa").innerHTML = movimentos.length ? movimentos.map(m => {
+      const entrou = m.tipo === "venda" || m.tipo === "entrada";
+      const botao = m.tipo === "venda" ? "" :
+        `<div class="acoes"><button class="perigo" data-excluir-caixa="${m.id}">Excluir</button></div>`;
+      return `
+        <div class="item">
+          <div>
+            <b>${esc(m.descricao)}</b>
+            <small>${esc(m.data)}</small>
+            ${m.pend ? '<small class="pend">⏳ aguardando envio</small>' : ""}
+          </div>
+          <div class="dir">
+            <b class="${entrou ? "entrada" : "saida"}">${entrou ? "+" : "-"} ${brl(m.valor)}</b>
+            ${botao}
+          </div>
+        </div>`;
+    }).join("") : '<p class="vazio">Nenhuma movimentação ainda.</p>';
+  }
+
+  // ---------- STATUS (online / offline / pendente) ----------
+  function atualizarStatus() {
+    const pendente = [...pecas, ...vendas, ...caixa].some(x => x._pend);
+    let texto;
+    if (!navigator.onLine) texto = "Sem internet: dados salvos no aparelho";
+    else if (pendente) texto = "Enviando alterações…";
+    else texto = "Sincronizado ✓";
+    $("status").textContent = texto;
+  }
+
+  // ---------- DADOS EM TEMPO REAL ----------
+  function iniciarDados() {
+    if (unsubs.length) return;
+    const ouvir = (nome, guardar) => onSnapshot(
+      collection(db, nome),
+      { includeMetadataChanges: true },
+      snap => {
+        guardar(snap.docs.map(d => ({ id: d.id, ...d.data(), _pend: d.metadata.hasPendingWrites })));
+        renderPecas(); renderVendas(); renderCaixa(); atualizarStatus();
+      },
+      err => toast("Erro ao carregar " + nome + ": " + err.message)
+    );
+    unsubs.push(ouvir("pecas", d => pecas = d));
+    unsubs.push(ouvir("vendas", d => vendas = d));
+    unsubs.push(ouvir("caixa", d => caixa = d));
+  }
+  function pararDados() {
+    unsubs.forEach(u => u());
+    unsubs = [];
+    pecas = []; vendas = []; caixa = [];
+  }
+
+  // ---------- LOGIN ----------
+  function mostrarLogin() {
+    $("app").classList.add("hidden");
+    $("login").classList.remove("hidden");
+  }
+  function mostrarApp() {
+    $("login").classList.add("hidden");
+    $("app").classList.remove("hidden");
+  }
+
+  onAuthStateChanged(auth, user => {
+    if (user && (user.email || "").toLowerCase() === EMAIL_LOJA) {
+      mostrarApp();
+      iniciarDados();
+      atualizarStatus();
+    } else if (user) {
+      signOut(auth);
+      mostrarLogin();
+      $("l-msg").textContent = "Este e-mail não tem acesso ao sistema.";
+    } else {
+      mostrarLogin();
+      pararDados();
+    }
+  });
+
+  $("btn-entrar").onclick = async () => {
+    $("l-msg").textContent = "Entrando…";
+    try {
+      await signInWithEmailAndPassword(auth, $("l-email").value.trim(), $("l-senha").value);
+      $("l-msg").textContent = "";
+      $("l-senha").value = "";
+    } catch (e) {
+      $("l-msg").textContent = "Não foi possível entrar. Verifique o e-mail e a senha. Para o primeiro acesso em um aparelho, é preciso ter internet.";
+    }
+  };
+  $("l-senha").addEventListener("keydown", e => { if (e.key === "Enter") $("btn-entrar").click(); });
+  $("btn-sair").onclick = () => {
+    if (confirm("Sair do sistema?")) signOut(auth);
+  };
+
+  // ---------- ABAS ----------
+  document.querySelectorAll("nav button").forEach(b => {
+    b.onclick = () => {
+      document.querySelectorAll("nav button").forEach(x => x.classList.toggle("ativa", x === b));
+      ["pecas", "vendas", "caixa"].forEach(a => $("aba-" + a).classList.toggle("hidden", a !== b.dataset.aba));
+      window.scrollTo({ top: 0 });
+    };
+  });
+
+  // ---------- EVENTOS ----------
+  CAMPOS.forEach(([id]) => $(id).addEventListener("input", atualizarResumo));
+  $("p-nome").addEventListener("input", atualizarResumo);
+  $("p-salvar").onclick = salvarPeca;
+  $("p-limpar").onclick = limparForm;
+  $("p-busca").addEventListener("input", renderPecas);
+  $("v-peca").addEventListener("change", preencherValorDaPeca);
+  $("v-peca").addEventListener("change", atualizarTotalVenda);
+  $("v-qtd").addEventListener("input", atualizarTotalVenda);
+  $("v-valor").addEventListener("input", atualizarTotalVenda);
+  $("v-registrar").onclick = registrarVenda;
+  $("c-salvar").onclick = lancarCaixa;
+
+  // Botões de editar/excluir (delegação de eventos)
+  document.addEventListener("click", e => {
+    const t = e.target;
+    if (t.dataset.editar) {
+      const p = pecas.find(x => x.id === t.dataset.editar);
+      if (p) editarPeca(p);
+    } else if (t.dataset.excluir) {
+      excluirPeca(t.dataset.excluir);
+    } else if (t.dataset.excluirVenda) {
+      excluirVenda(t.dataset.excluirVenda);
+    } else if (t.dataset.excluirCaixa) {
+      excluirLancamento(t.dataset.excluirCaixa);
+    }
+  });
+
+  window.addEventListener("online", atualizarStatus);
+  window.addEventListener("offline", atualizarStatus);
+
+  limparForm();
+</script>
+
+<script>
+  // Registra o modo offline (funciona no celular e no computador)
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    });
+  }
+</script>
+</body>
+</html>

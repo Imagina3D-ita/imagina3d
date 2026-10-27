@@ -1,0 +1,10 @@
+{
+  "name": "Imagina 3D",
+  "short_name": "Imagina 3D",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#111827",
+  "theme_color": "#111827"
+}
