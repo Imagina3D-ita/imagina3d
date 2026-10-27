@@ -142,7 +142,8 @@
           <div class="card">
             <h2>Itens do pedido</h2>
             <div class="linha">
-              <label style="flex:2;min-width:160px">Peça<input id="o-item-nome" list="lista-nomes" placeholder="Digite ou escolha a peça"></label>
+              <label style="flex:2;min-width:160px">Escolher peça salva<select id="o-item-select"></select></label>
+              <label style="flex:2;min-width:160px">Ou digite o nome<input id="o-item-nome" placeholder="Nome da peça"></label>
               <label style="flex:0 0 70px">Qtd<input id="o-item-qtd" inputmode="numeric" value="1"></label>
               <label style="flex:0 0 110px">R$ un.<input id="o-item-valor" inputmode="decimal"></label>
               <button id="o-item-add" class="verde">Adicionar</button>
@@ -463,6 +464,12 @@
     $("lista-nomes").innerHTML = pecas
       .slice().sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"))
       .map(p => `<option value="${esc(p.nome)}">`).join("");
+    const sel = $("o-item-select");
+    const escolhida = sel.value;
+    sel.innerHTML = '<option value="">— escolha uma peça —</option>' + pecas
+      .slice().sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"))
+      .map(p => `<option value="${p.id}">${esc(p.nome)} — ${brl(p.precoVenda)}</option>`).join("");
+    if (escolhida && pecas.some(p => p.id === escolhida)) sel.value = escolhida;
   }
 
   // ---------- ORÇAMENTO & WHATSAPP ----------
@@ -606,6 +613,7 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
     if (preco <= 0) { toast("Informe o valor unitário."); return; }
     adicionarItem(nome, $("o-item-qtd").value, preco);
     $("o-item-nome").value = "";
+    $("o-item-select").value = "";
     $("o-item-qtd").value = "1";
     $("o-item-valor").value = "";
   }
@@ -1060,6 +1068,12 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
   $("o-item-nome").addEventListener("change", () => {
     const preco = precoDaPeca($("o-item-nome").value.trim());
     if (preco !== null) $("o-item-valor").value = paraCampo(preco);
+  });
+  $("o-item-select").addEventListener("change", () => {
+    const p = pecas.find(x => x.id === $("o-item-select").value);
+    if (!p) return;
+    $("o-item-nome").value = p.nome;
+    $("o-item-valor").value = paraCampo(p.precoVenda);
   });
   $("o-item-add").onclick = adicionarItemDoForm;
   $("o-itens").addEventListener("input", e => {
