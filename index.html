@@ -87,7 +87,7 @@
   </header>
 
   <nav>
-    <button data-aba="precificacao" class="ativa pc-only">Precificação</button>
+    <button data-aba="precificacao" class="ativa">Precificação</button>
     <button data-aba="orcamento">Orçamento & WhatsApp</button>
     <button data-aba="pecas">Peças Salvas</button>
     <button data-aba="fluxo">Fluxo de Caixa</button>
@@ -97,7 +97,7 @@
 
   <main>
     <!-- PRECIFICAÇÃO -->
-    <section id="aba-precificacao" class="pc-only">
+    <section id="aba-precificacao">
       <div class="duas">
         <div class="card">
           <h2 id="titulo-form">Parâmetros da impressão</h2>
@@ -1095,8 +1095,7 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
   renderItens();
   atualizarOrcamentoUI();
   marcarTipoFluxo("entrada");
-  // No celular abre direto em Orçamento; no computador abre em Precificação
-  showAba(window.innerWidth < 700 ? "orcamento" : "precificacao");
+    showAba("precificacao");
 </script>
 <script>
   // Modo offline (funciona no celular e no computador)
