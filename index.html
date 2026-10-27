@@ -289,6 +289,17 @@
   </main>
 </div>
 
+<div id="modal-senha" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:20">
+  <div class="card" style="max-width:360px;width:90%;margin:0">
+    <h2 id="ms-titulo">Senha mestra</h2>
+    <p id="ms-texto" class="mini"></p>
+    <label>Senha<input id="ms-senha1" type="password" autocomplete="off"></label>
+    <label id="ms-label2" class="hidden">Repita a senha<input id="ms-senha2" type="password" autocomplete="off"></label>
+    <p id="ms-erro" class="msg"></p>
+    <button id="ms-ok">OK</button>
+    <button id="ms-cancelar" class="sec">Cancelar</button>
+  </div>
+</div>
 <div id="toast"></div>
 
 <script type="module">
@@ -349,6 +360,7 @@
   let unsubs = [];
   let editId = null;
   let tipoFluxo = "entrada";
+  let senhaCfg = null, senhaCarregada = false;
 
   const CAMPOS = [
     ["p-peso", "pesoG"], ["p-filamento", "filamentoKg"], ["p-horas", "tempoHoras"],
@@ -699,7 +711,7 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
       .catch(e => toast("Erro ao atualizar orçamento: " + e.message));
     toast("Venda registrada no caixa.");
   }
-  function desfazerVenda(id) {
+  function desfazerVendaDireto(id) {
     const o = orcamentos.find(x => x.id === id);
     if (!o) return;
     if (!confirm("Desfazer esta venda? O valor sai do caixa e o orçamento volta para Convertido.")) return;
@@ -712,7 +724,7 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
     setDoc(doc(db, "orcamentos", id), { status }, { merge: true })
       .catch(e => toast("Erro: " + e.message));
   }
-  function excluirOrcamento(id) {
+  function excluirOrcamentoDireto(id) {
     const o = orcamentos.find(x => x.id === id);
     if (!o) return;
     const aviso = o.status === "vendido"
@@ -763,6 +775,60 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
     }).join("");
   }
 
+  // ---------- SENHA MESTRA (protege apagar receitas e despesas) ----------
+  async function hashSenha(texto) {
+    const bytes = new TextEncoder().encode("imagina3d|" + texto);
+    const buf = await crypto.subtle.digest("SHA-256", bytes);
+    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+  function pedirSenha({ criar, texto }) {
+    return new Promise(resolve => {
+      $("ms-titulo").textContent = criar ? "Criar senha mestra" : "Senha mestra";
+      $("ms-texto").textContent = texto;
+      $("ms-senha1").value = "";
+      $("ms-senha2").value = "";
+      $("ms-erro").textContent = "";
+      $("ms-label2").classList.toggle("hidden", !criar);
+      $("modal-senha").classList.remove("hidden");
+      $("ms-senha1").focus();
+      const fechar = valor => {
+        $("modal-senha").classList.add("hidden");
+        $("ms-ok").onclick = null;
+        $("ms-cancelar").onclick = null;
+        resolve(valor);
+      };
+      $("ms-cancelar").onclick = () => fechar(null);
+      $("ms-ok").onclick = () => {
+        const a = $("ms-senha1").value;
+        const b = $("ms-senha2").value;
+        if (!a) { $("ms-erro").textContent = "Digite a senha."; return; }
+        if (criar && a.length < 4) { $("ms-erro").textContent = "Use pelo menos 4 caracteres."; return; }
+        if (criar && a !== b) { $("ms-erro").textContent = "As senhas não são iguais."; return; }
+        fechar(a);
+      };
+    });
+  }
+  async function comSenhaMestra(descricao, acao) {
+    if (!senhaCarregada) { toast("Aguarde o sistema carregar e tente de novo."); return; }
+    if (!senhaCfg) {
+      const nova = await pedirSenha({ criar: true, texto: "Cadastre a senha mestra. Ela será pedida para apagar receitas e despesas. Guarde-a em local seguro." });
+      if (!nova) return;
+      const hash = await hashSenha(nova);
+      setDoc(doc(db, "config", "seguranca"), { hash, criadoEm: Date.now() })
+        .catch(e => toast("Erro ao salvar a senha: " + e.message));
+      toast("Senha mestra cadastrada. Agora ela será pedida para apagar.");
+      return;
+    }
+    const digitada = await pedirSenha({ criar: false, texto: "Digite a senha mestra para " + descricao + "." });
+    if (digitada === null) return;
+    if ((await hashSenha(digitada)) !== senhaCfg.hash) { toast("Senha incorreta."); return; }
+    acao();
+  }
+  function excluirCaixa(id) { comSenhaMestra("excluir este lançamento", () => excluirCaixaDireto(id)); }
+  function excluirVendaAvulsa(id) { comSenhaMestra("excluir esta venda", () => excluirVendaAvulsaDireto(id)); }
+  function desfazerVenda(id) { comSenhaMestra("desfazer esta venda", () => desfazerVendaDireto(id)); }
+  function excluirOrcamento(id) { comSenhaMestra("excluir este orçamento", () => excluirOrcamentoDireto(id)); }
+
   // ---------- FLUXO DE CAIXA ----------
   function marcarTipoFluxo(t) {
     tipoFluxo = t;
@@ -783,11 +849,11 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
     $("f-valor").value = "";
     $("f-data").value = hoje();
   }
-  function excluirCaixa(id) {
+  function excluirCaixaDireto(id) {
     if (!confirm("Excluir este lançamento?")) return;
     deleteDoc(doc(db, "caixa", id)).catch(e => toast("Erro: " + e.message));
   }
-  function excluirVendaAvulsa(id) {
+  function excluirVendaAvulsaDireto(id) {
     if (!confirm("Excluir esta venda do caixa?")) return;
     deleteDoc(doc(db, "vendas", id)).catch(e => toast("Erro: " + e.message));
   }
@@ -920,11 +986,15 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
     unsubs.push(ouvir("vendas", d => vendas = d));
     unsubs.push(ouvir("caixa", d => caixa = d));
     unsubs.push(ouvir("orcamentos", d => orcamentos = d));
+    unsubs.push(onSnapshot(doc(db, "config", "seguranca"),
+      snap => { senhaCfg = snap.exists() ? snap.data() : null; senhaCarregada = true; },
+      err => toast("Não consegui carregar a senha mestra: " + err.message)));
   }
   function pararDados() {
     unsubs.forEach(u => u());
     unsubs = [];
     pecas = []; vendas = []; caixa = []; orcamentos = [];
+    senhaCfg = null; senhaCarregada = false;
   }
 
   // ---------- LOGIN ----------
