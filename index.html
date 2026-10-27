@@ -2,63 +2,80 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#111827">
+<title>Imagina 3D</title>
+<link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Imagina 3D">
-<link rel="manifest" href="manifest.json">
-<title>Imagina 3D</title>
 <style>
   * { box-sizing: border-box; }
   body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: #111827; color: #e5e7eb; min-height: 100vh; }
   .hidden { display: none !important; }
-  header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 16px; padding-top: calc(12px + env(safe-area-inset-top)); background: #1f2937; position: sticky; top: 0; z-index: 5; }
+  @media (max-width: 699px) { .pc-only { display: none !important; } }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 20px; background: #1f2937; position: sticky; top: 0; z-index: 5; }
   h1 { font-size: 20px; margin: 0; color: #f97316; }
   h2 { font-size: 17px; margin: 0 0 12px; }
-  #status { font-size: 12px; color: #9ca3af; flex: 1; text-align: center; }
-  nav { display: flex; gap: 8px; padding: 12px 16px 0; max-width: 900px; margin: 0 auto; }
-  nav button { flex: 1; }
+  #status { font-size: 13px; color: #9ca3af; flex: 1; text-align: center; }
+  nav { display: flex; gap: 8px; padding: 12px 20px 0; flex-wrap: wrap; max-width: 1200px; margin: 0 auto; }
+  nav button { flex: 1; min-width: 120px; }
   nav button.ativa { background: #f97316; }
   nav button:not(.ativa) { background: #374151; }
-  main { padding: 12px 16px 60px; max-width: 900px; margin: 0 auto; }
+  main { padding: 12px 20px 60px; max-width: 1200px; margin: 0 auto; }
   .card { background: #1f2937; border-radius: 14px; padding: 16px; margin-bottom: 16px; }
+  .duas { display: grid; grid-template-columns: 1fr; gap: 16px; }
+  @media (min-width: 900px) { .duas { grid-template-columns: 1.2fr 1fr; } }
   label { display: block; font-size: 13px; color: #9ca3af; margin-bottom: 10px; }
-  input, select { display: block; width: 100%; margin-top: 4px; padding: 12px; font-size: 16px; border-radius: 10px; border: 1px solid #374151; background: #111827; color: #fff; }
+  input, select, textarea { display: block; width: 100%; margin-top: 4px; padding: 10px; font-size: 15px; border-radius: 10px; border: 1px solid #374151; background: #111827; color: #fff; font-family: inherit; }
+  textarea { min-height: 120px; }
   .grid { display: grid; grid-template-columns: 1fr; gap: 0 12px; }
   @media (min-width: 600px) { .grid { grid-template-columns: 1fr 1fr; } }
-  button { background: #f97316; color: #fff; border: 0; border-radius: 10px; padding: 12px 16px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 8px; margin-right: 6px; }
+  .linha { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+  button { background: #f97316; color: #fff; border: 0; border-radius: 10px; padding: 10px 14px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 8px; margin-right: 6px; }
   button.sec { background: #374151; }
   button.perigo { background: #7f1d1d; }
-  .item { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid #374151; }
+  button.verde { background: #059669; }
+  button.azul { background: #1d4ed8; }
+  .toggle { display: flex; gap: 8px; }
+  .toggle button { flex: 1; margin-top: 4px; margin-right: 0; }
+  .item { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #374151; }
   .item small { display: block; color: #9ca3af; font-size: 12px; margin-top: 2px; }
   .dir { text-align: right; }
-  .acoes { display: flex; gap: 6px; justify-content: flex-end; }
+  .acoes { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
   .acoes button { padding: 6px 10px; font-size: 12px; margin-top: 6px; }
   .pend { color: #fbbf24 !important; }
   .resumo { background: #111827; border-radius: 10px; padding: 12px; font-size: 14px; margin: 8px 0; line-height: 1.8; }
   .vazio { color: #6b7280; }
   .entrada { color: #34d399; }
   .saida { color: #f87171; }
-  .login { max-width: 380px; margin: 12vh auto 0; }
   .msg { color: #fca5a5; font-size: 14px; min-height: 20px; }
+  .login { max-width: 380px; margin: 12vh auto 0; background: #1f2937; border-radius: 14px; padding: 20px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .cards .card { margin-bottom: 0; }
+  .numero { font-size: 24px; font-weight: 700; margin-top: 6px; }
+  .mini { font-size: 12px; color: #9ca3af; }
+  .badge { display: inline-block; font-size: 12px; padding: 3px 10px; border-radius: 999px; background: #374151; }
+  .b-enviado { background: #1e3a8a; color: #bfdbfe; }
+  .b-convertido { background: #065f46; color: #a7f3d0; }
+  .b-vendido { background: #14532d; color: #bbf7d0; }
+  .b-cancelado { background: #7f1d1d; color: #fecaca; }
+  pre.mensagem { white-space: pre-wrap; background: #0b3d2e; color: #e5fff3; padding: 14px; border-radius: 12px; font-size: 14px; line-height: 1.5; margin: 0; }
   #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(150px); background: #f97316; color: #fff; padding: 12px 18px; border-radius: 10px; transition: transform .3s; max-width: 92%; text-align: center; z-index: 9; }
   #toast.mostrar { transform: translateX(-50%) translateY(0); }
 </style>
 </head>
 <body>
 
-<!-- TELA DE LOGIN -->
+<!-- LOGIN -->
 <div id="login">
-  <main>
-    <div class="card login">
-      <h1>Imagina 3D</h1>
-      <p style="color:#9ca3af;font-size:14px">Entre com o e-mail e a senha da loja.</p>
-      <label>E-mail<input id="l-email" type="email" autocomplete="username"></label>
-      <label>Senha<input id="l-senha" type="password" autocomplete="current-password"></label>
-      <button id="btn-entrar">Entrar</button>
-      <p id="l-msg" class="msg"></p>
-    </div>
-  </main>
+  <div class="login">
+    <h1>Imagina 3D</h1>
+    <p style="color:#9ca3af;font-size:14px">Entre com o e-mail e a senha da loja.</p>
+    <label>E-mail<input id="l-email" type="email" autocomplete="username"></label>
+    <label>Senha<input id="l-senha" type="password" autocomplete="current-password"></label>
+    <button id="btn-entrar">Entrar</button>
+    <p id="l-msg" class="msg"></p>
+  </div>
 </div>
 
 <!-- SISTEMA -->
@@ -70,84 +87,204 @@
   </header>
 
   <nav>
-    <button data-aba="pecas" class="ativa">Peças</button>
-    <button data-aba="vendas">Vendas</button>
-    <button data-aba="caixa">Caixa</button>
+    <button data-aba="precificacao" class="ativa pc-only">Precificação</button>
+    <button data-aba="orcamento">Orçamento & WhatsApp</button>
+    <button data-aba="pecas">Peças Salvas</button>
+    <button data-aba="fluxo">Fluxo de Caixa</button>
+    <button data-aba="dashboard" class="pc-only">Dashboard</button>
+    <button data-aba="historico">Histórico</button>
   </nav>
 
   <main>
-    <!-- ABA PEÇAS -->
-    <section id="aba-pecas">
-      <div class="card">
-        <h2 id="titulo-form">Nova peça</h2>
-        <label>Nome da peça<input id="p-nome"></label>
-        <div class="grid">
-          <label>Peso (gramas)<input id="p-peso" inputmode="decimal"></label>
-          <label>Valor do filamento (R$ por kg)<input id="p-filamento" inputmode="decimal"></label>
-          <label>Tempo de impressão (horas)<input id="p-horas" inputmode="decimal"></label>
-          <label>Tempo de impressão (minutos)<input id="p-minutos" inputmode="decimal"></label>
-          <label>Perda/falha (%)<input id="p-falha" inputmode="decimal"></label>
-          <label>Potência da impressora (W)<input id="p-potencia" inputmode="decimal"></label>
-          <label>Valor da energia (R$ por kWh)<input id="p-kwh" inputmode="decimal"></label>
-          <label>Custo da máquina (R$ por hora)<input id="p-maquina" inputmode="decimal"></label>
-          <label>Sua hora de trabalho (R$ por hora)<input id="p-hmo" inputmode="decimal"></label>
-          <label>Tempo de trabalho (minutos)<input id="p-minmo" inputmode="decimal"></label>
-          <label>Custos extras (R$)<input id="p-extras" inputmode="decimal"></label>
-          <label>Lucro desejado (%)<input id="p-margem" inputmode="decimal"></label>
+    <!-- PRECIFICAÇÃO -->
+    <section id="aba-precificacao" class="pc-only">
+      <div class="duas">
+        <div class="card">
+          <h2 id="titulo-form">Parâmetros da impressão</h2>
+          <label>Nome da peça<input id="p-nome" placeholder="Ex: Vaso Hexagonal 10cm"></label>
+          <div class="grid">
+            <label>Peso (gramas)<input id="p-peso" inputmode="decimal"></label>
+            <label>Valor do filamento (R$ por kg)<input id="p-filamento" inputmode="decimal"></label>
+            <label>Tempo de impressão (horas)<input id="p-horas" inputmode="decimal"></label>
+            <label>Tempo de impressão (minutos)<input id="p-minutos" inputmode="decimal"></label>
+            <label>Perda/falha (%)<input id="p-falha" inputmode="decimal"></label>
+            <label>Potência da impressora (W)<input id="p-potencia" inputmode="decimal"></label>
+            <label>Valor da energia (R$ por kWh)<input id="p-kwh" inputmode="decimal"></label>
+            <label>Custo da máquina (R$ por hora)<input id="p-maquina" inputmode="decimal"></label>
+            <label>Sua hora de trabalho (R$ por hora)<input id="p-hmo" inputmode="decimal"></label>
+            <label>Tempo de trabalho (minutos)<input id="p-minmo" inputmode="decimal"></label>
+            <label>Custos extras (R$)<input id="p-extras" inputmode="decimal"></label>
+            <label>Lucro desejado (%)<input id="p-margem" inputmode="decimal"></label>
+          </div>
+          <button id="p-salvar">Salvar peça</button>
+          <button id="p-orcamento" class="verde">+ Orçamento</button>
+          <button id="p-limpar" class="sec">Limpar</button>
         </div>
-        <div class="resumo" id="p-resumo"></div>
-        <button id="p-salvar">Salvar peça</button>
-        <button id="p-limpar" class="sec">Limpar</button>
-      </div>
-      <div class="card">
-        <input id="p-busca" placeholder="Buscar peça pelo nome">
-        <div id="lista-pecas" style="margin-top:8px"></div>
-      </div>
-      <div class="card">
-        <h2>Importar peças do sistema antigo</h2>
-        <p class="vazio" style="font-size:13px">Escolha o arquivo <b>dados_antigos_pecas.json</b>. As peças são adicionadas ao catálogo. Se já existirem, são apenas atualizadas, sem duplicar.</p>
-        <input id="imp-arquivo" type="file" accept=".json,application/json">
-        <button id="imp-botao">Importar peças</button>
+        <div class="card">
+          <h2>Detalhamento de custos</h2>
+          <div class="resumo" id="p-detalhe"></div>
+          <div class="resumo" id="p-resumo"></div>
+        </div>
       </div>
     </section>
 
-    <!-- ABA VENDAS -->
-    <section id="aba-vendas" class="hidden">
-      <div class="card">
-        <h2>Registrar venda</h2>
-        <label>Peça<select id="v-peca"></select></label>
-        <div class="grid">
-          <label>Quantidade<input id="v-qtd" inputmode="numeric" value="1"></label>
-          <label>Valor unitário (R$)<input id="v-valor" inputmode="decimal"></label>
+    <!-- ORÇAMENTO & WHATSAPP -->
+    <section id="aba-orcamento" class="hidden">
+      <div class="duas">
+        <div>
+          <div class="card">
+            <h2>Cliente</h2>
+            <div class="grid">
+              <label>Nome do cliente<input id="o-cliente"></label>
+              <label>WhatsApp (com DDD)<input id="o-telefone" inputmode="tel" placeholder="Ex: 98 99999-9999"></label>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Itens do pedido</h2>
+            <div class="linha">
+              <label style="flex:2;min-width:160px">Peça<input id="o-item-nome" list="lista-nomes" placeholder="Digite ou escolha a peça"></label>
+              <label style="flex:0 0 70px">Qtd<input id="o-item-qtd" inputmode="numeric" value="1"></label>
+              <label style="flex:0 0 110px">R$ un.<input id="o-item-valor" inputmode="decimal"></label>
+              <button id="o-item-add" class="verde">Adicionar</button>
+            </div>
+            <datalist id="lista-nomes"></datalist>
+            <div id="o-itens" style="margin-top:8px"></div>
+          </div>
+          <div class="card">
+            <h2>Desconto</h2>
+            <div class="grid">
+              <label>Tipo
+                <select id="o-desc-tipo">
+                  <option value="percentual">Percentual (%)</option>
+                  <option value="real">Valor em R$</option>
+                </select>
+              </label>
+              <label>Valor do desconto<input id="o-desc-valor" inputmode="decimal" placeholder="Ex: 10 ou 3,45"></label>
+            </div>
+            <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="o-desc-mostrar" style="width:auto;margin:0"> Mostrar o desconto na mensagem</label>
+          </div>
+          <div class="card">
+            <h2>Mensagem personalizada</h2>
+            <textarea id="o-flerte" placeholder="Ex: Promoção especial só para você! Aproveite 🎉" style="min-height:70px"></textarea>
+            <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="o-flerte-mostrar" style="width:auto;margin:0"> Incluir na mensagem</label>
+          </div>
+          <div class="card">
+            <h2>Entrega e prazo</h2>
+            <div class="grid">
+              <label>Modalidade de envio
+                <select id="o-envio">
+                  <option>Entrega Grátis à Domicílio</option>
+                  <option>Retirada no local</option>
+                  <option>Envio via Correios / Transportadora</option>
+                </select>
+              </label>
+              <label>Prazo de produção (dias úteis)<input id="o-prazo" inputmode="numeric"></label>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Foto da peça</h2>
+            <input id="o-foto-arquivo" type="file" accept="image/*">
+            <div id="o-foto-preview" style="margin-top:10px"></div>
+            <label style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="o-foto-enviar" style="width:auto;margin:0"> Mencionar a foto na mensagem</label>
+            <button id="o-foto-remover" class="sec">Remover foto</button>
+          </div>
         </div>
-        <div class="resumo" id="v-total"></div>
-        <button id="v-registrar">Registrar venda</button>
-      </div>
-      <div class="card">
-        <h2>Vendas registradas</h2>
-        <div id="lista-vendas"></div>
+        <div>
+          <div class="card">
+            <h2>Resumo</h2>
+            <div class="resumo">
+              Subtotal: <b id="o-subtotal">R$ 0,00</b><br>
+              Desconto: <b id="o-desc">R$ 0,00</b><br>
+              <span style="font-size:18px">Total: <b id="o-total" class="entrada">R$ 0,00</b></span>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Mensagem do WhatsApp</h2>
+            <pre class="mensagem" id="o-mensagem"></pre>
+            <button id="o-enviar" class="verde">Enviar pelo WhatsApp</button>
+            <button id="o-copiar-foto" class="azul">Copiar foto</button>
+            <button id="o-baixar-foto" class="sec">Baixar foto</button>
+            <button id="o-limpar" class="sec">Limpar orçamento</button>
+            <p class="mini">Ao enviar, o orçamento é salvo no Histórico e o formulário é limpo. A foto não entra sozinha no WhatsApp: depois de colar o texto, use "Copiar foto" e cole com Ctrl+V.</p>
+          </div>
+        </div>
       </div>
     </section>
 
-    <!-- ABA CAIXA -->
-    <section id="aba-caixa" class="hidden">
-      <div class="card" id="c-saldo-box"></div>
+    <!-- PEÇAS SALVAS -->
+    <section id="aba-pecas" class="hidden">
       <div class="card">
-        <h2>Novo lançamento</h2>
-        <label>Tipo
-          <select id="c-tipo">
-            <option value="entrada">Entrada (dinheiro recebido)</option>
-            <option value="saida">Saída (gasto)</option>
-          </select>
-        </label>
-        <label>Descrição<input id="c-desc"></label>
-        <label>Valor (R$)<input id="c-valor" inputmode="decimal"></label>
-        <button id="c-salvar">Lançar</button>
+        <div class="linha" style="justify-content:space-between">
+          <h2 style="margin:0">Catálogo de peças</h2>
+          <input id="pc-busca" placeholder="Buscar peça" style="max-width:280px">
+        </div>
+        <div id="lista-pecas" style="margin-top:10px"></div>
       </div>
+    </section>
+
+    <!-- FLUXO DE CAIXA -->
+    <section id="aba-fluxo" class="hidden">
+      <div class="linha" style="margin-bottom:12px">
+        <label style="flex:0 0 200px">Mês<input id="f-mes" type="month"></label>
+      </div>
+      <div class="cards">
+        <div class="card"><div class="mini">Entradas do mês</div><div class="numero entrada" id="f-entradas">R$ 0,00</div></div>
+        <div class="card"><div class="mini">Saídas do mês</div><div class="numero saida" id="f-saidas">R$ 0,00</div></div>
+        <div class="card"><div class="mini">Saldo do mês</div><div class="numero" id="f-saldo-mes">R$ 0,00</div></div>
+        <div class="card"><div class="mini">Saldo geral (todos os meses)</div><div class="numero" id="f-saldo-geral">R$ 0,00</div></div>
+      </div>
+      <div class="duas">
+        <div class="card">
+          <h2>Novo lançamento</h2>
+          <label>Tipo de operação</label>
+          <div class="toggle">
+            <button type="button" id="f-receita" class="verde">Receita (+)</button>
+            <button type="button" id="f-despesa" class="sec">Despesa (-)</button>
+          </div>
+          <label style="margin-top:12px">Descrição<input id="f-desc" placeholder="Ex: filamento PLA, energia, embalagem"></label>
+          <label>Valor (R$)<input id="f-valor" inputmode="decimal" placeholder="0,00"></label>
+          <label>Data<input id="f-data" type="date"></label>
+          <button id="f-salvar">Registrar</button>
+        </div>
+        <div class="card">
+          <h2>Movimentações do mês</h2>
+          <div id="f-lista"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DASHBOARD -->
+    <section id="aba-dashboard" class="hidden pc-only">
+      <div class="cards" id="d-cards"></div>
+      <div class="duas">
+        <div class="card">
+          <h2>Peças mais vendidas</h2>
+          <div id="d-ranking"></div>
+        </div>
+        <div class="card">
+          <h2>Vendas dos últimos 6 meses</h2>
+          <div id="d-meses"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HISTÓRICO -->
+    <section id="aba-historico" class="hidden">
       <div class="card">
-        <h2>Movimentações</h2>
-        <div id="lista-caixa"></div>
+        <div class="linha">
+          <label style="flex:0 0 200px">Filtrar por status
+            <select id="h-status">
+              <option value="todos">Todos</option>
+              <option value="enviado">Enviado</option>
+              <option value="convertido">Convertido</option>
+              <option value="vendido">Vendido</option>
+              <option value="cancelado">Cancelado</option>
+            </select>
+          </label>
+          <label style="flex:1;min-width:200px">Buscar cliente<input id="h-busca" placeholder="Nome do cliente"></label>
+        </div>
       </div>
+      <div id="h-lista"></div>
     </section>
   </main>
 </div>
@@ -159,7 +296,7 @@
   import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-  // ---------- CONFIGURAÇÃO ----------
+  // ---------- CONFIGURAÇÃO (mesma do celular) ----------
   const firebaseConfig = {
     apiKey: "AIzaSyDC1TjVGDiDsDZybeHGcPfoRPc1rsuxWAM",
     authDomain: "imagina3d-754d2.firebaseapp.com",
@@ -172,15 +309,46 @@
 
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  // Guarda os dados no aparelho e envia para a nuvem quando há internet
   const db = initializeFirestore(app, {
     localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
   });
 
+  // ---------- AJUDANTES ----------
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const num = v => { const n = parseFloat(String(v ?? "").trim().replace(",", ".")); return isNaN(n) ? 0 : n; };
+  const round2 = v => Math.round(v * 100) / 100;
+  const brl = v => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const paraCampo = v => (v === "" || v === null || v === undefined) ? "" : String(v).replace(".", ",");
+  const hoje = () => {
+    const d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  };
+  const mesAtual = () => hoje().slice(0, 7);
+  const dataBR = iso => { if (!iso) return ""; const [a, m, d] = String(iso).split("-"); return `${d}/${m}/${a}`; };
+  function addDiasUteis(n) {
+    const d = new Date();
+    let c = 0;
+    while (c < n) {
+      d.setDate(d.getDate() + 1);
+      const w = d.getDay();
+      if (w !== 0 && w !== 6) c++;
+    }
+    return d.toLocaleDateString("pt-BR");
+  }
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("mostrar");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => t.classList.remove("mostrar"), 3500);
+  }
+
   // ---------- ESTADO ----------
-  let pecas = [], vendas = [], caixa = [];
-  let editId = null;
+  let pecas = [], vendas = [], caixa = [], orcamentos = [];
   let unsubs = [];
+  let editId = null;
+  let tipoFluxo = "entrada";
 
   const CAMPOS = [
     ["p-peso", "pesoG"], ["p-filamento", "filamentoKg"], ["p-horas", "tempoHoras"],
@@ -194,27 +362,8 @@
     minutosMO: 0, extras: 0, margem: 80
   };
 
-  // ---------- AJUDANTES ----------
-  const $ = id => document.getElementById(id);
-  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const num = v => { const n = parseFloat(String(v ?? "").trim().replace(",", ".")); return isNaN(n) ? 0 : n; };
-  const round2 = v => Math.round(v * 100) / 100;
-  const brl = v => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-  const paraCampo = v => (v === "" || v === null || v === undefined) ? "" : String(v).replace(".", ",");
-  const hoje = () => {
-    const d = new Date();
-    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-  };
-  function toast(msg) {
-    const t = $("toast");
-    t.textContent = msg;
-    t.classList.add("mostrar");
-    clearTimeout(toast._t);
-    toast._t = setTimeout(() => t.classList.remove("mostrar"), 3500);
-  }
-
-  // ---------- CÁLCULO DO PREÇO ----------
-  function calcular(p) {
+  // ---------- CÁLCULO DA PEÇA ----------
+  function calcularPeca(p) {
     const horas = num(p.tempoHoras) + num(p.tempoMinutos) / 60;
     const fator = 1 + num(p.taxaFalha) / 100;
     const material = (num(p.pesoG) / 1000) * num(p.filamentoKg) * fator;
@@ -224,51 +373,61 @@
     const extras = num(p.extras);
     const custo = material + energia + maquina + mao + extras;
     const venda = custo * (1 + num(p.margem) / 100);
-    return { custo, venda, lucro: venda - custo };
+    return { custo, venda, lucro: venda - custo, material, energia, maquina, mao, extras };
   }
-
-  // ---------- FORMULÁRIO DE PEÇA ----------
-  function lerForm() {
+  function lerFormPeca() {
     const p = { nome: $("p-nome").value.trim() };
     CAMPOS.forEach(([id, k]) => p[k] = num($(id).value));
     return p;
   }
-  function atualizarResumo() {
-    const c = calcular(lerForm());
-    $("p-resumo").innerHTML = `Custo: <b>${brl(c.custo)}</b><br>Preço de venda sugerido: <b>${brl(c.venda)}</b><br>Lucro por unidade: <b>${brl(c.lucro)}</b>`;
+  function atualizarResumoPeca() {
+    const p = lerFormPeca();
+    const c = calcularPeca(p);
+    $("p-detalhe").innerHTML = `
+      Material (filamento): <b>${brl(c.material)}</b><br>
+      Energia elétrica: <b>${brl(c.energia)}</b><br>
+      Hora máquina: <b>${brl(c.maquina)}</b><br>
+      Mão de obra: <b>${brl(c.mao)}</b><br>
+      Custos extras: <b>${brl(c.extras)}</b><br>
+      Custo total da peça: <b class="saida">${brl(c.custo)}</b>`;
+    $("p-resumo").innerHTML = `Preço de venda sugerido: <b class="entrada" style="font-size:18px">${brl(c.venda)}</b><br>Lucro por unidade: <b>${brl(c.lucro)}</b>`;
   }
-  function limparForm() {
+  function limparFormPeca() {
     editId = null;
-    $("titulo-form").textContent = "Nova peça";
+    $("titulo-form").textContent = "Parâmetros da impressão";
     $("p-nome").value = "";
     CAMPOS.forEach(([id, k]) => $(id).value = paraCampo(PADROES[k]));
-    atualizarResumo();
+    atualizarResumoPeca();
   }
   function editarPeca(p) {
     editId = p.id;
     $("titulo-form").textContent = "Editando: " + p.nome;
     $("p-nome").value = p.nome || "";
     CAMPOS.forEach(([id, k]) => $(id).value = paraCampo(p[k] ?? PADROES[k] ?? ""));
-    atualizarResumo();
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    atualizarResumoPeca();
+    showAba("precificacao");
   }
   function salvarPeca() {
-    const p = lerForm();
+    const p = lerFormPeca();
     if (!p.nome) { toast("Digite o nome da peça."); return; }
-    const c = calcular(p);
+    const c = calcularPeca(p);
     const dados = { ...p, custo: round2(c.custo), precoVenda: round2(c.venda), atualizadoEm: Date.now() };
     const ref = editId ? doc(db, "pecas", editId) : doc(collection(db, "pecas"));
     setDoc(ref, dados).catch(e => toast("Erro ao salvar: " + e.message));
-    toast("Peça salva. Sem internet, será enviada quando a conexão voltar.");
-    limparForm();
+    toast("Peça salva.");
+    limparFormPeca();
   }
-  function excluirPeca(id) {
-    if (!confirm("Excluir esta peça? As vendas antigas dela continuam registradas.")) return;
-    deleteDoc(doc(db, "pecas", id)).catch(e => toast("Erro ao excluir: " + e.message));
+  function custoDaPeca(nome) {
+    const p = pecas.find(x => (x.nome || "").trim().toLowerCase() === String(nome || "").trim().toLowerCase());
+    return p && p.custo !== undefined && p.custo !== null ? p.custo : null;
+  }
+  function precoDaPeca(nome) {
+    const p = pecas.find(x => (x.nome || "").trim().toLowerCase() === String(nome || "").trim().toLowerCase());
+    return p ? p.precoVenda : null;
   }
 
   function renderPecas() {
-    const busca = $("p-busca").value.trim().toLowerCase();
+    const busca = $("pc-busca").value.trim().toLowerCase();
     const lista = pecas
       .filter(p => (p.nome || "").toLowerCase().includes(busca))
       .sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"));
@@ -276,153 +435,472 @@
       <div class="item">
         <div>
           <b>${esc(p.nome)}</b>
-          <small>${p.pesoG}g · ${p.tempoHoras}h ${p.tempoMinutos}min</small>
+          <small>${p.pesoG}g · ${p.tempoHoras}h ${p.tempoMinutos}min · custo ${brl(p.custo)}</small>
           ${p._pend ? '<small class="pend">⏳ aguardando envio</small>' : ""}
         </div>
         <div class="dir">
           <b class="entrada">${brl(p.precoVenda)}</b>
-          <small>custo ${brl(p.custo)}</small>
           <div class="acoes">
-            <button class="sec" data-editar="${p.id}">Editar</button>
-            <button class="perigo" data-excluir="${p.id}">Excluir</button>
+            <button class="sec" data-carregar="${p.id}">Carregar</button>
+            <button class="verde" data-add-peca="${p.id}">+ Orçamento</button>
+            <button class="perigo" data-excluir-peca="${p.id}">Excluir</button>
           </div>
         </div>
       </div>`).join("") : '<p class="vazio">Nenhuma peça encontrada.</p>';
-
-    // Atualiza a lista de peças da aba Vendas
-    const atual = $("v-peca").value;
-    $("v-peca").innerHTML = pecas
-      .slice()
-      .sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"))
-      .map(p => `<option value="${p.id}">${esc(p.nome)} — ${brl(p.precoVenda)}</option>`).join("");
-    if (atual && pecas.some(p => p.id === atual)) $("v-peca").value = atual;
-    if (!$("v-valor").value) preencherValorDaPeca();
-    atualizarTotalVenda();
+    $("o-item-nome").setAttribute("placeholder", "Digite ou escolha a peça");
+    $("lista-nomes").innerHTML = pecas
+      .slice().sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"))
+      .map(p => `<option value="${esc(p.nome)}">`).join("");
   }
 
-  // ---------- VENDAS ----------
-  function preencherValorDaPeca() {
-    const p = pecas.find(x => x.id === $("v-peca").value);
-    if (p) $("v-valor").value = paraCampo(p.precoVenda);
+  // ---------- ORÇAMENTO & WHATSAPP ----------
+  const RASCUNHO_CHAVE = "imagina3d_pc_rascunho";
+  function novoRascunho(envio, prazo) {
+    return {
+      cliente: "", telefone: "", itens: [],
+      descTipo: "percentual", descValor: "", descMostrar: false,
+      flerte: "", flerteMostrar: true,
+      envio: envio || "Entrega Grátis à Domicílio", prazo: prazo ?? 3,
+      foto: null, fotoEnviar: true
+    };
   }
-  function atualizarTotalVenda() {
-    const qtd = Math.max(1, Math.floor(num($("v-qtd").value) || 1));
-    const total = qtd * num($("v-valor").value);
-    $("v-total").innerHTML = `Total da venda: <b>${brl(total)}</b>`;
+  function carregarRascunho() {
+    try {
+      const salvo = JSON.parse(localStorage.getItem(RASCUNHO_CHAVE) || "null");
+      return salvo ? { ...novoRascunho(), ...salvo } : novoRascunho();
+    } catch (e) {
+      return novoRascunho();
+    }
   }
-  function registrarVenda() {
-    const p = pecas.find(x => x.id === $("v-peca").value);
-    if (!p) { toast("Cadastre uma peça antes de registrar a venda."); return; }
-    const qtd = Math.max(1, Math.floor(num($("v-qtd").value) || 1));
-    const valor = num($("v-valor").value);
-    if (valor <= 0) { toast("Informe o valor unitário."); return; }
-    setDoc(doc(collection(db, "vendas")), {
-      pecaId: p.id,
-      pecaNome: p.nome,
-      qtd,
-      valorUnit: round2(valor),
-      total: round2(qtd * valor),
-      data: hoje(),
-      criadoEm: Date.now()
-    }).catch(e => toast("Erro ao registrar: " + e.message));
-    toast("Venda registrada.");
-    $("v-qtd").value = "1";
-    preencherValorDaPeca();
-    atualizarTotalVenda();
+  let rascunho = carregarRascunho();
+  function salvarRascunho() {
+    try {
+      localStorage.setItem(RASCUNHO_CHAVE, JSON.stringify(rascunho));
+    } catch (e) {
+      toast("Não consegui guardar o rascunho (foto muito grande?).");
+    }
   }
-  function excluirVenda(id) {
-    if (!confirm("Excluir esta venda? O valor sai do caixa.")) return;
-    deleteDoc(doc(db, "vendas", id)).catch(e => toast("Erro ao excluir: " + e.message));
+  function calcTotais(r) {
+    const subtotal = r.itens.reduce((s, i) => s + num(i.qtd) * num(i.preco), 0);
+    let desconto = r.descTipo === "real" ? num(r.descValor) : subtotal * num(r.descValor) / 100;
+    if (desconto > subtotal) desconto = subtotal;
+    if (desconto < 0) desconto = 0;
+    return { subtotal: round2(subtotal), desconto: round2(desconto), total: round2(subtotal - desconto) };
   }
-  function renderVendas() {
-    const lista = vendas.slice().sort((a, b) => (b.criadoEm || 0) - (a.criadoEm || 0));
-    $("lista-vendas").innerHTML = lista.length ? lista.map(v => `
+  function labelDesconto(r) {
+    return r.descTipo === "real" ? `R$ ${paraCampo(num(r.descValor))}` : `${num(r.descValor)}%`;
+  }
+  function montarMensagem(d) {
+    const itensTxt = d.itens.map(i => `◆ ${i.qtd}x ${i.nome} (${brl(i.preco)} un.)`).join("\n");
+    const qtdTotal = d.itens.reduce((s, i) => s + (num(i.qtd) || 0), 0);
+    const retirada = /retirada/i.test(d.envio || "");
+    const linhaDisp = `${retirada ? "Pronto para retirada" : "Previsão de entrega"} dia ${d.dataDisp}`;
+    const linhaDesc = (d.mostrarDesc && d.desconto > 0)
+      ? `◆ Subtotal: ${brl(d.subtotal)}\n◆ Desconto (${d.descLabel}): -${brl(d.desconto)}\n\n`
+      : "";
+    const linhaFlerte = (d.mostrarFlerte && String(d.flerte || "").trim()) ? `\n\n${String(d.flerte).trim()}` : "";
+    const linhaFoto = (d.temFoto && d.fotoEnviar) ? "\n\n📸 Foto da peça em anexo" : "";
+    return `✨ Olá, ${d.cliente}! Aqui é da Imagina 3D. 🚀
+
+Segue o orçamento detalhado para o seu pedido:
+
+📦 Itens do pedido:
+${itensTxt}
+
+🔢 Quantidade Total: ${qtdTotal} unidades
+🚚 Envio: ${d.envio}
+⏳ Prazo de Produção: ${d.prazo} dias úteis
+📅 Disponibilidade: ${linhaDisp}
+
+${linhaDesc}💰 Valor Total: ${brl(d.total)}
+
+Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte}${linhaFoto}
+
+📸 Siga nosso portfólio no Instagram: @lojaimagina3d`;
+  }
+  function dadosDoRascunho() {
+    const t = calcTotais(rascunho);
+    const prazo = num(rascunho.prazo) || 3;
+    return {
+      cliente: rascunho.cliente.trim() || "Cliente",
+      telefone: rascunho.telefone,
+      itens: rascunho.itens.map(i => ({ nome: i.nome, qtd: num(i.qtd) || 1, preco: round2(num(i.preco)) })),
+      envio: rascunho.envio, prazo, dataDisp: addDiasUteis(prazo),
+      subtotal: t.subtotal, desconto: t.desconto, total: t.total,
+      descTipo: rascunho.descTipo, descValor: num(rascunho.descValor), descLabel: labelDesconto(rascunho),
+      mostrarDesc: !!rascunho.descMostrar,
+      flerte: rascunho.flerte || "", mostrarFlerte: !!rascunho.flerteMostrar,
+      foto: rascunho.foto || null, fotoEnviar: !!rascunho.fotoEnviar, temFoto: !!rascunho.foto
+    };
+  }
+  function atualizarOrcamentoUI() {
+    const t = calcTotais(rascunho);
+    $("o-subtotal").textContent = brl(t.subtotal);
+    $("o-desc").textContent = "-" + brl(t.desconto);
+    $("o-total").textContent = brl(t.total);
+    $("o-mensagem").textContent = rascunho.itens.length
+      ? montarMensagem(dadosDoRascunho())
+      : "Adicione itens para ver a mensagem.";
+    $("o-foto-preview").innerHTML = rascunho.foto
+      ? `<img src="${rascunho.foto}" style="max-width:100%;max-height:200px;border-radius:10px">`
+      : "";
+  }
+  function renderItens() {
+    $("o-itens").innerHTML = rascunho.itens.length ? rascunho.itens.map((i, idx) => `
       <div class="item">
-        <div>
-          <b>${esc(v.pecaNome)}</b>
-          <small>${esc(v.data)} · ${v.qtd}x ${brl(v.valorUnit)}</small>
-          ${v._pend ? '<small class="pend">⏳ aguardando envio</small>' : ""}
-        </div>
-        <div class="dir">
-          <b class="entrada">${brl(v.total)}</b>
-          <div class="acoes"><button class="perigo" data-excluir-venda="${v.id}">Excluir</button></div>
-        </div>
-      </div>`).join("") : '<p class="vazio">Nenhuma venda registrada.</p>';
+        <div style="flex:1"><b>${esc(i.nome)}</b></div>
+        <div style="flex:0 0 70px"><label style="margin:0">Qtd<input type="text" inputmode="numeric" value="${esc(i.qtd)}" data-idx="${idx}" data-campo="qtd"></label></div>
+        <div style="flex:0 0 110px"><label style="margin:0">R$ un.<input type="text" inputmode="decimal" value="${paraCampo(i.preco)}" data-idx="${idx}" data-campo="preco"></label></div>
+        <button class="perigo" data-rem="${idx}">X</button>
+      </div>`).join("") : '<p class="vazio">Nenhum item ainda. Adicione uma peça acima.</p>';
+  }
+  function preencherCamposOrcamento() {
+    $("o-cliente").value = rascunho.cliente;
+    $("o-telefone").value = rascunho.telefone;
+    $("o-desc-tipo").value = rascunho.descTipo;
+    $("o-desc-valor").value = rascunho.descValor;
+    $("o-desc-mostrar").checked = !!rascunho.descMostrar;
+    $("o-flerte").value = rascunho.flerte;
+    $("o-flerte-mostrar").checked = !!rascunho.flerteMostrar;
+    $("o-envio").value = rascunho.envio;
+    $("o-prazo").value = rascunho.prazo;
+    $("o-foto-enviar").checked = !!rascunho.fotoEnviar;
+  }
+  function lerCamposOrcamento() {
+    rascunho.cliente = $("o-cliente").value;
+    rascunho.telefone = $("o-telefone").value;
+    rascunho.descTipo = $("o-desc-tipo").value;
+    rascunho.descValor = $("o-desc-valor").value;
+    rascunho.descMostrar = $("o-desc-mostrar").checked;
+    rascunho.flerte = $("o-flerte").value;
+    rascunho.flerteMostrar = $("o-flerte-mostrar").checked;
+    rascunho.envio = $("o-envio").value;
+    rascunho.prazo = $("o-prazo").value;
+    rascunho.fotoEnviar = $("o-foto-enviar").checked;
+    salvarRascunho();
+    atualizarOrcamentoUI();
+  }
+  function adicionarItem(nome, qtd, preco) {
+    rascunho.itens.push({ nome: nome.trim(), qtd: Math.max(1, Math.floor(num(qtd)) || 1), preco: round2(num(preco)) });
+    salvarRascunho();
+    renderItens();
+    atualizarOrcamentoUI();
+  }
+  function adicionarItemDoForm() {
+    const nome = $("o-item-nome").value.trim();
+    if (!nome) { toast("Escolha ou digite a peça."); return; }
+    let preco = num($("o-item-valor").value);
+    if (preco <= 0) preco = precoDaPeca(nome) ?? 0;
+    if (preco <= 0) { toast("Informe o valor unitário."); return; }
+    adicionarItem(nome, $("o-item-qtd").value, preco);
+    $("o-item-nome").value = "";
+    $("o-item-qtd").value = "1";
+    $("o-item-valor").value = "";
+  }
+  function comprimirImagem(arquivo) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(arquivo);
+      img.onload = () => {
+        const escala = Math.min(1, 900 / Math.max(img.width, img.height));
+        const c = document.createElement("canvas");
+        c.width = Math.round(img.width * escala);
+        c.height = Math.round(img.height * escala);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        resolve(c.toDataURL("image/jpeg", 0.8));
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("imagem inválida")); };
+      img.src = url;
+    });
+  }
+  async function copiarFoto(dataUrl) {
+    try {
+      const img = new Image();
+      img.src = dataUrl;
+      await img.decode();
+      const c = document.createElement("canvas");
+      c.width = img.width;
+      c.height = img.height;
+      c.getContext("2d").drawImage(img, 0, 0);
+      const blob = await new Promise(r => c.toBlob(r, "image/png"));
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      toast("Foto copiada. Agora cole no WhatsApp com Ctrl+V.");
+    } catch (e) {
+      toast("Não consegui copiar. Use o botão Baixar foto.");
+    }
+  }
+  function baixarFoto(dataUrl, nome) {
+    if (!dataUrl) { toast("Nenhuma foto no orçamento."); return; }
+    const a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = "peca_" + (nome || "foto").replace(/[^a-z0-9]+/gi, "_") + ".jpg";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+  function linkWhatsApp(telefone, mensagem) {
+    const tel = String(telefone || "").replace(/\D/g, "");
+    const fone = tel ? (tel.startsWith("55") ? tel : "55" + tel) : "";
+    return `https://api.whatsapp.com/send?${fone ? "phone=" + fone + "&" : ""}text=${encodeURIComponent(mensagem)}`;
+  }
+  function gravarOrcamento(d, mensagem, telefone) {
+    const ref = doc(collection(db, "orcamentos"));
+    setDoc(ref, {
+      cliente: d.cliente, telefone: telefone || "", itens: d.itens,
+      subtotal: d.subtotal, desconto: d.desconto, total: d.total,
+      descTipo: d.descTipo, descValor: d.descValor, descLabel: d.descLabel,
+      mostrarDesc: d.mostrarDesc, flerte: d.flerte, mostrarFlerte: d.mostrarFlerte,
+      envio: d.envio, prazo: d.prazo, dataDisp: d.dataDisp,
+      mensagem, foto: d.foto, fotoEnviar: d.fotoEnviar,
+      status: "enviado", data: hoje(), criadoEm: Date.now()
+    }).catch(e => toast("Erro ao salvar orçamento: " + e.message));
+    return ref.id;
+  }
+  function enviarWhatsApp() {
+    if (!rascunho.itens.length) { toast("Adicione pelo menos um item."); return; }
+    const d = dadosDoRascunho();
+    const mensagem = montarMensagem(d);
+    gravarOrcamento(d, mensagem, rascunho.telefone);
+    window.open(linkWhatsApp(rascunho.telefone, mensagem), "_blank");
+    toast("Orçamento enviado e salvo no Histórico.");
+    limparOrcamento();
+  }
+  function limparOrcamento() {
+    const envio = rascunho.envio, prazo = rascunho.prazo;
+    rascunho = novoRascunho(envio, prazo);
+    salvarRascunho();
+    preencherCamposOrcamento();
+    renderItens();
+    atualizarOrcamentoUI();
   }
 
-  // ---------- CAIXA ----------
-  function lancarCaixa() {
-    const desc = $("c-desc").value.trim();
-    const valor = num($("c-valor").value);
+  // ---------- VENDAS (usadas por orçamento e pelo celular) ----------
+  function itensDe(v) {
+    if (Array.isArray(v.itens) && v.itens.length) return v.itens;
+    return [{ nome: v.pecaNome || "Venda", qtd: v.qtd || 1, valorUnit: v.valorUnit, total: v.total, custoUnit: null }];
+  }
+  function marcarVendido(id) {
+    const o = orcamentos.find(x => x.id === id);
+    if (!o || o.status === "vendido") return;
+    if (!confirm(`Marcar como vendido: ${brl(o.total)} de ${o.cliente}?`)) return;
+    const itens = (o.itens || []).map(i => ({
+      nome: i.nome, qtd: i.qtd, valorUnit: i.preco,
+      total: round2(num(i.qtd) * num(i.preco)), custoUnit: custoDaPeca(i.nome)
+    }));
+    const todosComCusto = itens.length && itens.every(i => i.custoUnit !== null);
+    const custoTotal = todosComCusto ? round2(itens.reduce((s, i) => s + i.custoUnit * num(i.qtd), 0)) : null;
+    const vref = doc(collection(db, "vendas"));
+    setDoc(vref, {
+      origem: "orcamento", orcamentoId: id, cliente: o.cliente,
+      itens, total: o.total, custoTotal, data: hoje(), criadoEm: Date.now()
+    }).catch(e => toast("Erro ao registrar venda: " + e.message));
+    setDoc(doc(db, "orcamentos", id), { status: "vendido", vendaId: vref.id }, { merge: true })
+      .catch(e => toast("Erro ao atualizar orçamento: " + e.message));
+    toast("Venda registrada no caixa.");
+  }
+  function desfazerVenda(id) {
+    const o = orcamentos.find(x => x.id === id);
+    if (!o) return;
+    if (!confirm("Desfazer esta venda? O valor sai do caixa e o orçamento volta para Convertido.")) return;
+    if (o.vendaId) deleteDoc(doc(db, "vendas", o.vendaId)).catch(e => toast("Erro: " + e.message));
+    setDoc(doc(db, "orcamentos", id), { status: "convertido", vendaId: null }, { merge: true })
+      .catch(e => toast("Erro: " + e.message));
+    toast("Venda desfeita.");
+  }
+  function mudarStatus(id, status) {
+    setDoc(doc(db, "orcamentos", id), { status }, { merge: true })
+      .catch(e => toast("Erro: " + e.message));
+  }
+  function excluirOrcamento(id) {
+    const o = orcamentos.find(x => x.id === id);
+    if (!o) return;
+    const aviso = o.status === "vendido"
+      ? "Excluir este orçamento? A venda ligada a ele também será apagada do caixa."
+      : "Excluir este orçamento?";
+    if (!confirm(aviso)) return;
+    if (o.vendaId) deleteDoc(doc(db, "vendas", o.vendaId)).catch(() => {});
+    deleteDoc(doc(db, "orcamentos", id)).catch(e => toast("Erro: " + e.message));
+  }
+
+  const ROTULO = { enviado: "Enviado", convertido: "Convertido", vendido: "Vendido", cancelado: "Cancelado" };
+  function renderHistorico() {
+    const filtro = $("h-status").value;
+    const busca = $("h-busca").value.trim().toLowerCase();
+    const lista = orcamentos
+      .filter(o => filtro === "todos" || o.status === filtro)
+      .filter(o => (o.cliente || "").toLowerCase().includes(busca))
+      .sort((a, b) => (b.criadoEm || 0) - (a.criadoEm || 0));
+    if (!lista.length) { $("h-lista").innerHTML = '<div class="card vazio">Nenhum orçamento encontrado.</div>'; return; }
+    $("h-lista").innerHTML = lista.map(o => {
+      const botoes = [];
+      if (o.status !== "cancelado") botoes.push(`<button class="verde" data-reenviar="${o.id}">Reenviar WhatsApp</button>`);
+      if (o.foto) botoes.push(`<button class="azul" data-copiar-foto="${o.id}">Copiar foto</button>`);
+      if (o.status === "enviado") botoes.push(`<button class="sec" data-converter="${o.id}">Convertido</button>`);
+      if (o.status === "enviado" || o.status === "convertido") botoes.push(`<button class="verde" data-vender="${o.id}">Vendido</button>`);
+      if (o.status === "vendido") botoes.push(`<button class="sec" data-desfazer="${o.id}">Desfazer venda</button>`);
+      if (o.status === "enviado" || o.status === "convertido") botoes.push(`<button class="sec" data-cancelar="${o.id}">Cancelar</button>`);
+      botoes.push(`<button class="perigo" data-excluir-orc="${o.id}">Excluir</button>`);
+      return `
+        <div class="card">
+          <div class="linha" style="justify-content:space-between">
+            <div>
+              <h2 style="margin:0">${esc(o.cliente)}</h2>
+              <div class="mini">${dataBR(o.data)} · ${esc(o.envio || "")} · prazo ${o.prazo} dias</div>
+            </div>
+            <div style="text-align:right">
+              <span class="badge b-${o.status}">${ROTULO[o.status] || o.status}</span>
+              ${o._pend ? '<div class="pend mini">⏳ aguardando envio</div>' : ""}
+              <div class="numero entrada" style="font-size:20px">${brl(o.total)}</div>
+            </div>
+          </div>
+          <div style="margin:10px 0">
+            ${(o.itens || []).map(i => `<div>${esc(i.qtd)}x ${esc(i.nome)} <span class="mini">(${brl(i.preco)} un.)</span></div>`).join("")}
+            ${o.desconto > 0 ? `<div class="mini">Desconto: -${brl(o.desconto)}</div>` : ""}
+          </div>
+          <div class="acoes" style="justify-content:flex-start">${botoes.join("")}</div>
+        </div>`;
+    }).join("");
+  }
+
+  // ---------- FLUXO DE CAIXA ----------
+  function marcarTipoFluxo(t) {
+    tipoFluxo = t;
+    $("f-receita").className = t === "entrada" ? "verde" : "sec";
+    $("f-despesa").className = t === "saida" ? "perigo" : "sec";
+  }
+  function lancarFluxo() {
+    const desc = $("f-desc").value.trim();
+    const valor = num($("f-valor").value);
+    const data = $("f-data").value || hoje();
     if (!desc) { toast("Digite a descrição."); return; }
     if (valor <= 0) { toast("Informe o valor."); return; }
     setDoc(doc(collection(db, "caixa")), {
-      tipo: $("c-tipo").value,
-      descricao: desc,
-      valor: round2(valor),
-      data: hoje(),
-      criadoEm: Date.now()
+      tipo: tipoFluxo, descricao: desc, valor: round2(valor), data, criadoEm: Date.now()
     }).catch(e => toast("Erro ao lançar: " + e.message));
-    toast("Lançamento registrado.");
-    $("c-desc").value = "";
-    $("c-valor").value = "";
+    toast(tipoFluxo === "entrada" ? "Receita registrada." : "Despesa registrada.");
+    $("f-desc").value = "";
+    $("f-valor").value = "";
+    $("f-data").value = hoje();
   }
-  function excluirLancamento(id) {
+  function excluirCaixa(id) {
     if (!confirm("Excluir este lançamento?")) return;
-    deleteDoc(doc(db, "caixa", id)).catch(e => toast("Erro ao excluir: " + e.message));
+    deleteDoc(doc(db, "caixa", id)).catch(e => toast("Erro: " + e.message));
   }
-  function renderCaixa() {
-    const totalVendas = vendas.reduce((s, v) => s + num(v.total), 0);
-    const entradas = caixa.filter(c => c.tipo === "entrada").reduce((s, c) => s + num(c.valor), 0);
-    const saidas = caixa.filter(c => c.tipo === "saida").reduce((s, c) => s + num(c.valor), 0);
-    const saldo = totalVendas + entradas - saidas;
-    const mes = hoje().slice(0, 7);
-    const vendidoMes = vendas
-      .filter(v => String(v.data || "").startsWith(mes))
-      .reduce((s, v) => s + num(v.total), 0);
-
-    $("c-saldo-box").innerHTML = `
-      <div>Saldo atual</div>
-      <div style="font-size:28px;font-weight:700" class="${saldo < 0 ? "saida" : "entrada"}">${brl(saldo)}</div>
-      <div class="resumo">Vendido neste mês: <b>${brl(vendidoMes)}</b></div>`;
+  function excluirVendaAvulsa(id) {
+    if (!confirm("Excluir esta venda do caixa?")) return;
+    deleteDoc(doc(db, "vendas", id)).catch(e => toast("Erro: " + e.message));
+  }
+  function renderFluxo() {
+    const mes = $("f-mes").value || mesAtual();
+    const vendasMes = vendas.filter(v => String(v.data || "").startsWith(mes));
+    const caixaMes = caixa.filter(c => String(c.data || "").startsWith(mes));
+    const entradas = vendasMes.reduce((s, v) => s + num(v.total), 0) + caixaMes.filter(c => c.tipo === "entrada").reduce((s, c) => s + num(c.valor), 0);
+    const saidas = caixaMes.filter(c => c.tipo === "saida").reduce((s, c) => s + num(c.valor), 0);
+    const totalGeral = vendas.reduce((s, v) => s + num(v.total), 0)
+      + caixa.filter(c => c.tipo === "entrada").reduce((s, c) => s + num(c.valor), 0)
+      - caixa.filter(c => c.tipo === "saida").reduce((s, c) => s + num(c.valor), 0);
+    $("f-entradas").textContent = brl(entradas);
+    $("f-saidas").textContent = brl(saidas);
+    $("f-saldo-mes").textContent = brl(entradas - saidas);
+    $("f-saldo-geral").textContent = brl(totalGeral);
 
     const movimentos = [
-      ...vendas.map(v => ({
+      ...vendasMes.map(v => ({
         id: v.id, tipo: "venda", data: v.data, criadoEm: v.criadoEm || 0,
-        descricao: `Venda: ${v.pecaNome} (${v.qtd}x)`, valor: num(v.total), pend: v._pend
+        descricao: (v.origem === "orcamento" ? "Venda (orçamento): " : "Venda: ") + (v.cliente || itensDe(v).map(i => i.nome).join(", ")),
+        valor: num(v.total), pend: v._pend, origem: v.origem
       })),
-      ...caixa.map(c => ({
+      ...caixaMes.map(c => ({
         id: c.id, tipo: c.tipo, data: c.data, criadoEm: c.criadoEm || 0,
         descricao: c.descricao, valor: num(c.valor), pend: c._pend
       }))
-    ].sort((a, b) => b.criadoEm - a.criadoEm);
+    ].sort((a, b) => (b.data || "").localeCompare(a.data || "") || b.criadoEm - a.criadoEm);
 
-    $("lista-caixa").innerHTML = movimentos.length ? movimentos.map(m => {
+    $("f-lista").innerHTML = movimentos.length ? movimentos.map(m => {
       const entrou = m.tipo === "venda" || m.tipo === "entrada";
-      const botao = m.tipo === "venda" ? "" :
-        `<div class="acoes"><button class="perigo" data-excluir-caixa="${m.id}">Excluir</button></div>`;
+      let botao = "";
+      if (m.tipo === "venda" && m.origem !== "orcamento") botao = `<button class="perigo" data-excluir-venda="${m.id}">Excluir</button>`;
+      if (m.tipo === "venda" && m.origem === "orcamento") botao = `<span class="mini">pelo Histórico</span>`;
+      if (m.tipo !== "venda") botao = `<button class="perigo" data-excluir-caixa="${m.id}">Excluir</button>`;
       return `
         <div class="item">
           <div>
             <b>${esc(m.descricao)}</b>
-            <small>${esc(m.data)}</small>
+            <small>${dataBR(m.data)}</small>
             ${m.pend ? '<small class="pend">⏳ aguardando envio</small>' : ""}
           </div>
           <div class="dir">
             <b class="${entrou ? "entrada" : "saida"}">${entrou ? "+" : "-"} ${brl(m.valor)}</b>
-            ${botao}
+            <div class="acoes">${botao}</div>
           </div>
         </div>`;
-    }).join("") : '<p class="vazio">Nenhuma movimentação ainda.</p>';
+    }).join("") : '<p class="vazio">Nenhuma movimentação neste mês.</p>';
   }
 
-  // ---------- STATUS (online / offline / pendente) ----------
+  // ---------- DASHBOARD ----------
+  function renderDashboard() {
+    const mes = mesAtual();
+    const totalGeral = vendas.reduce((s, v) => s + num(v.total), 0);
+    const vendidoMes = vendas.filter(v => String(v.data || "").startsWith(mes)).reduce((s, v) => s + num(v.total), 0);
+    const qtdVendas = vendas.length;
+    const ticket = qtdVendas ? totalGeral / qtdVendas : 0;
+    const enviados = orcamentos.filter(o => o.status !== "cancelado").length;
+    const vendidos = orcamentos.filter(o => o.status === "vendido").length;
+    const taxa = enviados ? Math.round(vendidos / enviados * 100) : 0;
+    const comCusto = vendas.filter(v => v.custoTotal !== undefined && v.custoTotal !== null);
+    const lucro = comCusto.reduce((s, v) => s + (num(v.total) - num(v.custoTotal)), 0);
+
+    $("d-cards").innerHTML = `
+      <div class="card"><div class="mini">Vendido neste mês</div><div class="numero entrada">${brl(vendidoMes)}</div></div>
+      <div class="card"><div class="mini">Vendido no total</div><div class="numero">${brl(totalGeral)}</div></div>
+      <div class="card"><div class="mini">Número de vendas</div><div class="numero">${qtdVendas}</div></div>
+      <div class="card"><div class="mini">Ticket médio</div><div class="numero">${brl(ticket)}</div></div>
+      <div class="card"><div class="mini">Orçamentos enviados</div><div class="numero">${enviados}</div></div>
+      <div class="card"><div class="mini">Taxa de conversão</div><div class="numero">${taxa}%</div><div class="mini">orçamentos que viraram venda</div></div>
+      <div class="card"><div class="mini">Lucro estimado</div><div class="numero">${brl(lucro)}</div><div class="mini">só vendas com custo cadastrado</div></div>`;
+
+    const mapa = {};
+    vendas.forEach(v => itensDe(v).forEach(i => {
+      const k = i.nome || "Sem nome";
+      mapa[k] = mapa[k] || { nome: k, qtd: 0, total: 0 };
+      mapa[k].qtd += num(i.qtd) || 1;
+      mapa[k].total += num(i.total) || 0;
+    }));
+    const ranking = Object.values(mapa).sort((a, b) => b.qtd - a.qtd).slice(0, 10);
+    $("d-ranking").innerHTML = ranking.length
+      ? ranking.map((r, idx) => `<div class="item"><div><b>${idx + 1}. ${esc(r.nome)}</b><small>${r.qtd} unidade(s)</small></div><b class="entrada">${brl(r.total)}</b></div>`).join("")
+      : '<p class="vazio">Ainda não há vendas.</p>';
+
+    const meses = [];
+    for (let k = 0; k < 6; k++) {
+      const d = new Date();
+      d.setDate(1);
+      d.setMonth(d.getMonth() - k);
+      const ym = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+      const total = vendas.filter(v => String(v.data || "").startsWith(ym)).reduce((s, v) => s + num(v.total), 0);
+      meses.push({ ym, total, label: d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }) });
+    }
+    $("d-meses").innerHTML = meses.map(m => `<div class="item"><div><b style="text-transform:capitalize">${esc(m.label)}</b></div><b class="entrada">${brl(m.total)}</b></div>`).join("");
+  }
+
+  // ---------- RENDER GERAL ----------
+  function renderTudo() {
+    renderPecas();
+    renderFluxo();
+    renderDashboard();
+    renderHistorico();
+    atualizarOrcamentoUI();
+    atualizarStatus();
+  }
+
+  // ---------- STATUS ----------
   function atualizarStatus() {
-    const pendente = [...pecas, ...vendas, ...caixa].some(x => x._pend);
+    const pendente = [...pecas, ...vendas, ...caixa, ...orcamentos].some(x => x._pend);
     let texto;
-    if (!navigator.onLine) texto = "Sem internet: dados salvos no aparelho";
+    if (!navigator.onLine) texto = "⚠ Sem internet: conecte para sincronizar";
     else if (pendente) texto = "Enviando alterações…";
-    else texto = "Sincronizado ✓";
+    else texto = "Conectado ✓";
     $("status").textContent = texto;
   }
 
@@ -434,45 +912,39 @@
       { includeMetadataChanges: true },
       snap => {
         guardar(snap.docs.map(d => ({ id: d.id, ...d.data(), _pend: d.metadata.hasPendingWrites })));
-        renderPecas(); renderVendas(); renderCaixa(); atualizarStatus();
+        renderTudo();
       },
       err => toast("Erro ao carregar " + nome + ": " + err.message)
     );
     unsubs.push(ouvir("pecas", d => pecas = d));
     unsubs.push(ouvir("vendas", d => vendas = d));
     unsubs.push(ouvir("caixa", d => caixa = d));
+    unsubs.push(ouvir("orcamentos", d => orcamentos = d));
   }
   function pararDados() {
     unsubs.forEach(u => u());
     unsubs = [];
-    pecas = []; vendas = []; caixa = [];
+    pecas = []; vendas = []; caixa = []; orcamentos = [];
   }
 
   // ---------- LOGIN ----------
-  function mostrarLogin() {
-    $("app").classList.add("hidden");
-    $("login").classList.remove("hidden");
-  }
-  function mostrarApp() {
-    $("login").classList.add("hidden");
-    $("app").classList.remove("hidden");
-  }
-
   onAuthStateChanged(auth, user => {
     if (user && (user.email || "").toLowerCase() === EMAIL_LOJA) {
-      mostrarApp();
+      $("login").classList.add("hidden");
+      $("app").classList.remove("hidden");
       iniciarDados();
-      atualizarStatus();
+      renderTudo();
     } else if (user) {
       signOut(auth);
-      mostrarLogin();
+      $("login").classList.remove("hidden");
+      $("app").classList.add("hidden");
       $("l-msg").textContent = "Este e-mail não tem acesso ao sistema.";
     } else {
-      mostrarLogin();
+      $("login").classList.remove("hidden");
+      $("app").classList.add("hidden");
       pararDados();
     }
   });
-
   $("btn-entrar").onclick = async () => {
     $("l-msg").textContent = "Entrando…";
     try {
@@ -480,84 +952,156 @@
       $("l-msg").textContent = "";
       $("l-senha").value = "";
     } catch (e) {
-      $("l-msg").textContent = "Não foi possível entrar. Verifique o e-mail e a senha. Para o primeiro acesso em um aparelho, é preciso ter internet.";
+      $("l-msg").textContent = "Não foi possível entrar. Verifique o e-mail e a senha, e a conexão com a internet.";
     }
   };
   $("l-senha").addEventListener("keydown", e => { if (e.key === "Enter") $("btn-entrar").click(); });
-  $("btn-sair").onclick = () => {
-    if (confirm("Sair do sistema?")) signOut(auth);
-  };
+  $("btn-sair").onclick = () => { if (confirm("Sair do sistema?")) signOut(auth); };
 
   // ---------- ABAS ----------
-  document.querySelectorAll("nav button").forEach(b => {
-    b.onclick = () => {
-      document.querySelectorAll("nav button").forEach(x => x.classList.toggle("ativa", x === b));
-      ["pecas", "vendas", "caixa"].forEach(a => $("aba-" + a).classList.toggle("hidden", a !== b.dataset.aba));
-      window.scrollTo({ top: 0 });
-    };
+  function showAba(nome) {
+    document.querySelectorAll("nav button").forEach(b => b.classList.toggle("ativa", b.dataset.aba === nome));
+    ["precificacao", "orcamento", "pecas", "fluxo", "dashboard", "historico"].forEach(a => {
+      $("aba-" + a).classList.toggle("hidden", a !== nome);
+    });
+    window.scrollTo({ top: 0 });
+  }
+  document.querySelectorAll("nav button").forEach(b => b.onclick = () => showAba(b.dataset.aba));
+
+  // ---------- EVENTOS: PRECIFICAÇÃO ----------
+  CAMPOS.forEach(([id]) => $(id).addEventListener("input", atualizarResumoPeca));
+  $("p-nome").addEventListener("input", atualizarResumoPeca);
+  $("p-salvar").onclick = salvarPeca;
+  $("p-limpar").onclick = limparFormPeca;
+  $("p-orcamento").onclick = () => {
+    const p = lerFormPeca();
+    if (!p.nome) { toast("Digite o nome da peça."); return; }
+    const c = calcularPeca(p);
+    adicionarItem(p.nome, 1, round2(c.venda));
+    showAba("orcamento");
+    toast("Peça adicionada ao orçamento.");
+  };
+
+  // ---------- EVENTOS: ORÇAMENTO ----------
+  ["o-cliente", "o-telefone", "o-desc-tipo", "o-desc-valor", "o-desc-mostrar", "o-flerte", "o-flerte-mostrar", "o-envio", "o-prazo", "o-foto-enviar"]
+    .forEach(id => $(id).addEventListener("input", lerCamposOrcamento));
+  ["o-desc-tipo", "o-envio", "o-desc-mostrar", "o-flerte-mostrar", "o-foto-enviar"]
+    .forEach(id => $(id).addEventListener("change", lerCamposOrcamento));
+  $("o-item-nome").addEventListener("change", () => {
+    const preco = precoDaPeca($("o-item-nome").value.trim());
+    if (preco !== null) $("o-item-valor").value = paraCampo(preco);
+  });
+  $("o-item-add").onclick = adicionarItemDoForm;
+  $("o-itens").addEventListener("input", e => {
+    const t = e.target;
+    if (!t.dataset.campo) return;
+    const item = rascunho.itens[Number(t.dataset.idx)];
+    if (!item) return;
+    if (t.dataset.campo === "qtd") item.qtd = Math.max(1, Math.floor(num(t.value)) || 1);
+    if (t.dataset.campo === "preco") item.preco = round2(num(t.value));
+    salvarRascunho();
+    atualizarOrcamentoUI();
+  });
+  $("o-itens").addEventListener("click", e => {
+    const idx = e.target.dataset.rem;
+    if (idx === undefined) return;
+    rascunho.itens.splice(Number(idx), 1);
+    salvarRascunho();
+    renderItens();
+    atualizarOrcamentoUI();
+  });
+  $("o-foto-arquivo").addEventListener("change", async e => {
+    const arquivo = e.target.files[0];
+    if (!arquivo) return;
+    try {
+      rascunho.foto = await comprimirImagem(arquivo);
+      salvarRascunho();
+      atualizarOrcamentoUI();
+      toast("Foto adicionada.");
+    } catch (err) {
+      toast("Não consegui ler a foto.");
+    }
+    e.target.value = "";
+  });
+  $("o-foto-remover").onclick = () => {
+    rascunho.foto = null;
+    salvarRascunho();
+    atualizarOrcamentoUI();
+  };
+  $("o-enviar").onclick = enviarWhatsApp;
+  $("o-copiar-foto").onclick = () => rascunho.foto ? copiarFoto(rascunho.foto) : toast("Adicione uma foto primeiro.");
+  $("o-baixar-foto").onclick = () => baixarFoto(rascunho.foto, rascunho.cliente);
+  $("o-limpar").onclick = () => { if (confirm("Limpar o orçamento atual?")) limparOrcamento(); };
+
+  // ---------- EVENTOS: PEÇAS ----------
+  $("pc-busca").addEventListener("input", renderPecas);
+  $("lista-pecas").addEventListener("click", e => {
+    const t = e.target;
+    if (t.dataset.carregar) {
+      const p = pecas.find(x => x.id === t.dataset.carregar);
+      if (p) editarPeca(p);
+    } else if (t.dataset.addPeca) {
+      const p = pecas.find(x => x.id === t.dataset.addPeca);
+      if (p) { adicionarItem(p.nome, 1, p.precoVenda); showAba("orcamento"); toast("Peça adicionada ao orçamento."); }
+    } else if (t.dataset.excluirPeca) {
+      if (confirm("Excluir esta peça do catálogo? As vendas antigas continuam registradas.")) {
+        deleteDoc(doc(db, "pecas", t.dataset.excluirPeca)).catch(e => toast("Erro: " + e.message));
+      }
+    }
   });
 
-  // ---------- IMPORTAR PEÇAS DO SISTEMA ANTIGO ----------
-  async function importarPecasAntigas() {
-    const arquivo = $("imp-arquivo").files[0];
-    if (!arquivo) { toast("Escolha o arquivo dados_antigos_pecas.json primeiro."); return; }
-    try {
-      const dados = JSON.parse(await arquivo.text());
-      const lista = Array.isArray(dados.pecas) ? dados.pecas : null;
-      if (!lista) { toast("Arquivo inválido: não encontrei a lista de peças."); return; }
-      if (!confirm(`Importar ${lista.length} peças? Peças com o mesmo código serão atualizadas.`)) return;
-      lista.forEach(p => {
-        const { id, ...resto } = p;
-        setDoc(doc(db, "pecas", id), resto).catch(e => toast("Erro na importação: " + e.message));
-      });
-      toast(`${lista.length} peças enviadas. Confira na lista abaixo.`);
-      $("imp-arquivo").value = "";
-    } catch (e) {
-      toast("Não consegui ler o arquivo: " + e.message);
-    }
-  }
-  $("imp-botao").onclick = importarPecasAntigas;
-
-  // ---------- EVENTOS ----------
-  CAMPOS.forEach(([id]) => $(id).addEventListener("input", atualizarResumo));
-  $("p-nome").addEventListener("input", atualizarResumo);
-  $("p-salvar").onclick = salvarPeca;
-  $("p-limpar").onclick = limparForm;
-  $("p-busca").addEventListener("input", renderPecas);
-  $("v-peca").addEventListener("change", preencherValorDaPeca);
-  $("v-peca").addEventListener("change", atualizarTotalVenda);
-  $("v-qtd").addEventListener("input", atualizarTotalVenda);
-  $("v-valor").addEventListener("input", atualizarTotalVenda);
-  $("v-registrar").onclick = registrarVenda;
-  $("c-salvar").onclick = lancarCaixa;
-
-  // Botões de editar/excluir (delegação de eventos)
-  document.addEventListener("click", e => {
+  // ---------- EVENTOS: FLUXO ----------
+  $("f-mes").value = mesAtual();
+  $("f-mes").addEventListener("change", renderFluxo);
+  $("f-receita").onclick = () => marcarTipoFluxo("entrada");
+  $("f-despesa").onclick = () => marcarTipoFluxo("saida");
+  $("f-salvar").onclick = lancarFluxo;
+  $("f-data").value = hoje();
+  $("f-lista").addEventListener("click", e => {
     const t = e.target;
-    if (t.dataset.editar) {
-      const p = pecas.find(x => x.id === t.dataset.editar);
-      if (p) editarPeca(p);
-    } else if (t.dataset.excluir) {
-      excluirPeca(t.dataset.excluir);
-    } else if (t.dataset.excluirVenda) {
-      excluirVenda(t.dataset.excluirVenda);
-    } else if (t.dataset.excluirCaixa) {
-      excluirLancamento(t.dataset.excluirCaixa);
-    }
+    if (t.dataset.excluirCaixa) excluirCaixa(t.dataset.excluirCaixa);
+    if (t.dataset.excluirVenda) excluirVendaAvulsa(t.dataset.excluirVenda);
+  });
+
+  // ---------- EVENTOS: HISTÓRICO ----------
+  $("h-status").addEventListener("change", renderHistorico);
+  $("h-busca").addEventListener("input", renderHistorico);
+  $("h-lista").addEventListener("click", e => {
+    const t = e.target;
+    const d = t.dataset;
+    const orc = id => orcamentos.find(x => x.id === id);
+    if (d.reenviar) {
+      const o = orc(d.reenviar);
+      if (o) window.open(linkWhatsApp(o.telefone, o.mensagem), "_blank");
+    } else if (d.copiarFoto) {
+      const o = orc(d.copiarFoto);
+      if (o) copiarFoto(o.foto);
+    } else if (d.converter) mudarStatus(d.converter, "convertido");
+    else if (d.vender) marcarVendido(d.vender);
+    else if (d.desfazer) desfazerVenda(d.desfazer);
+    else if (d.cancelar) {
+      const o = orc(d.cancelar);
+      if (o && o.status === "vendido") toast("Desfaça a venda antes de cancelar.");
+      else if (confirm("Cancelar este orçamento?")) mudarStatus(d.cancelar, "cancelado");
+    } else if (d.excluirOrc) excluirOrcamento(d.excluirOrc);
   });
 
   window.addEventListener("online", atualizarStatus);
   window.addEventListener("offline", atualizarStatus);
 
-  limparForm();
+  // ---------- INÍCIO ----------
+  limparFormPeca();
+  preencherCamposOrcamento();
+  renderItens();
+  atualizarOrcamentoUI();
+  marcarTipoFluxo("entrada");
+  // No celular abre direto em Orçamento; no computador abre em Precificação
+  showAba(window.innerWidth < 700 ? "orcamento" : "precificacao");
 </script>
-
 <script>
-  // Registra o modo offline (funciona no celular e no computador)
+  // Modo offline (funciona no celular e no computador)
   if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("sw.js").catch(() => {});
-    });
+    window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
   }
 </script>
 </body>
