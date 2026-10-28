@@ -90,6 +90,7 @@
     <button data-aba="precificacao" class="ativa">Precificação</button>
     <button data-aba="orcamento">Orçamento & WhatsApp</button>
     <button data-aba="pecas">Peças Salvas</button>
+    <button data-aba="producao">Produção</button>
     <button data-aba="fluxo">Fluxo de Caixa</button>
     <button data-aba="dashboard" class="pc-only">Dashboard</button>
     <button data-aba="historico">Histórico</button>
@@ -142,7 +143,8 @@
           <div class="card">
             <h2>Itens do pedido</h2>
             <div class="linha">
-              <label style="flex:2;min-width:160px">Escolher peça salva<select id="o-item-select"></select></label>
+              <label style="flex:2;min-width:200px">Buscar peça salva<input id="o-busca-peca" placeholder="Digite parte do nome (ex: vaso, chav)"></label>
+              <div id="o-resultado-peca" style="flex:0 0 100%;max-height:260px;overflow:auto;margin-bottom:8px"></div>
               <label style="flex:2;min-width:160px">Ou digite o nome<input id="o-item-nome" placeholder="Nome da peça"></label>
               <label style="flex:0 0 70px">Qtd<input id="o-item-qtd" inputmode="numeric" value="1"></label>
               <label style="flex:0 0 110px">R$ un.<input id="o-item-valor" inputmode="decimal"></label>
@@ -220,6 +222,20 @@
           <input id="pc-busca" placeholder="Buscar peça" style="max-width:280px">
         </div>
         <div id="lista-pecas" style="margin-top:10px"></div>
+      </div>
+    </section>
+
+    <!-- PRODUÇÃO -->
+    <section id="aba-producao" class="hidden">
+      <div class="card">
+        <h2>Fila de produção</h2>
+        <p class="mini">Orçamentos convertidos ou vendidos entram aqui sozinhos. O nº 1 é a peça da vez. Ao clicar em Finalizado, o pedido sai da lista e o próximo vira a peça da vez. Você também pode trocar o número de qualquer pedido.</p>
+      </div>
+      <div id="p-fila"></div>
+      <div class="card">
+        <h2>Convertidos ou vendidos fora da fila</h2>
+        <p class="mini">Pedidos antigos que não entraram na fila. Clique para enviar.</p>
+        <div id="p-fora"></div>
       </div>
     </section>
 
@@ -357,7 +373,7 @@
   }
 
   // ---------- ESTADO ----------
-  let pecas = [], vendas = [], caixa = [], orcamentos = [];
+  let pecas = [], vendas = [], caixa = [], orcamentos = [], producao = [];
   let unsubs = [];
   let editId = null;
   let tipoFluxo = "entrada";
@@ -464,12 +480,7 @@
     $("lista-nomes").innerHTML = pecas
       .slice().sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"))
       .map(p => `<option value="${esc(p.nome)}">`).join("");
-    const sel = $("o-item-select");
-    const escolhida = sel.value;
-    sel.innerHTML = '<option value="">— escolha uma peça —</option>' + pecas
-      .slice().sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"))
-      .map(p => `<option value="${p.id}">${esc(p.nome)} — ${brl(p.precoVenda)}</option>`).join("");
-    if (escolhida && pecas.some(p => p.id === escolhida)) sel.value = escolhida;
+    renderResultadoPeca();
   }
 
   // ---------- ORÇAMENTO & WHATSAPP ----------
@@ -613,7 +624,8 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
     if (preco <= 0) { toast("Informe o valor unitário."); return; }
     adicionarItem(nome, $("o-item-qtd").value, preco);
     $("o-item-nome").value = "";
-    $("o-item-select").value = "";
+    $("o-busca-peca").value = "";
+    renderResultadoPeca();
     $("o-item-qtd").value = "1";
     $("o-item-valor").value = "";
   }
@@ -718,6 +730,7 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
     setDoc(doc(db, "orcamentos", id), { status: "vendido", vendaId: vref.id }, { merge: true })
       .catch(e => toast("Erro ao atualizar orçamento: " + e.message));
     toast("Venda registrada no caixa.");
+    enviarParaFila(o);
   }
   function desfazerVendaDireto(id) {
     const o = orcamentos.find(x => x.id === id);
@@ -729,6 +742,7 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
     toast("Venda desfeita.");
   }
   function mudarStatus(id, status) {
+    if (status === "convertido") { const o0 = orcamentos.find(x => x.id === id); if (o0) enviarParaFila(o0); }
     setDoc(doc(db, "orcamentos", id), { status }, { merge: true })
       .catch(e => toast("Erro: " + e.message));
   }
@@ -964,6 +978,7 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
     renderFluxo();
     renderDashboard();
     renderHistorico();
+    renderProducao();
     atualizarOrcamentoUI();
     atualizarStatus();
   }
@@ -994,6 +1009,7 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
     unsubs.push(ouvir("vendas", d => vendas = d));
     unsubs.push(ouvir("caixa", d => caixa = d));
     unsubs.push(ouvir("orcamentos", d => orcamentos = d));
+    unsubs.push(ouvir("producao", d => producao = d));
     unsubs.push(onSnapshot(doc(db, "config", "seguranca"),
       snap => { senhaCfg = snap.exists() ? snap.data() : null; senhaCarregada = true; },
       err => toast("Não consegui carregar a senha mestra: " + err.message)));
@@ -1001,7 +1017,7 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
   function pararDados() {
     unsubs.forEach(u => u());
     unsubs = [];
-    pecas = []; vendas = []; caixa = []; orcamentos = [];
+    pecas = []; vendas = []; caixa = []; orcamentos = []; producao = [];
     senhaCfg = null; senhaCarregada = false;
   }
 
@@ -1039,12 +1055,120 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
   // ---------- ABAS ----------
   function showAba(nome) {
     document.querySelectorAll("nav button").forEach(b => b.classList.toggle("ativa", b.dataset.aba === nome));
-    ["precificacao", "orcamento", "pecas", "fluxo", "dashboard", "historico"].forEach(a => {
+    ["precificacao", "orcamento", "pecas", "producao", "fluxo", "dashboard", "historico"].forEach(a => {
       $("aba-" + a).classList.toggle("hidden", a !== nome);
     });
     window.scrollTo({ top: 0 });
   }
   document.querySelectorAll("nav button").forEach(b => b.onclick = () => showAba(b.dataset.aba));
+
+  // ---------- FILA DE PRODUÇÃO ----------
+  function filaAtiva() {
+    return producao
+      .filter(p => p.status === "fila")
+      .sort((a, b) => (a.posicao || 0) - (b.posicao || 0) || (a.criadoEm || 0) - (b.criadoEm || 0));
+  }
+  function renumerar(lista) {
+    lista.forEach((p, i) => {
+      if (p.posicao !== i + 1) {
+        setDoc(doc(db, "producao", p.id), { posicao: i + 1 }, { merge: true })
+          .catch(e => toast("Erro ao organizar a fila: " + e.message));
+      }
+    });
+  }
+  function enviarParaFila(o) {
+    if (producao.some(p => p.orcamentoId === o.id && p.status === "fila")) return false;
+    setDoc(doc(collection(db, "producao")), {
+      orcamentoId: o.id, cliente: o.cliente || "", itens: o.itens || [],
+      envio: o.envio || "", dataDisp: o.dataDisp || "",
+      status: "fila", posicao: filaAtiva().length + 1, criadoEm: Date.now()
+    }).catch(e => toast("Erro ao enviar para a fila: " + e.message));
+    return true;
+  }
+  function moverPara(id, novaPos) {
+    const lista = filaAtiva();
+    const idx = lista.findIndex(p => p.id === id);
+    if (idx < 0) return;
+    const [item] = lista.splice(idx, 1);
+    const pos = Math.min(Math.max(1, Math.floor(num(novaPos)) || 1), lista.length + 1);
+    lista.splice(pos - 1, 0, item);
+    renumerar(lista);
+    toast(`${item.cliente} agora é o nº ${pos}.`);
+  }
+  function finalizarItem(id) {
+    setDoc(doc(db, "producao", id), { status: "finalizado", finalizadoEm: Date.now() }, { merge: true })
+      .catch(e => toast("Erro: " + e.message));
+    renumerar(filaAtiva().filter(p => p.id !== id));
+    toast("Finalizado. A próxima peça agora é a da vez.");
+  }
+  function removerDaFila(id) {
+    if (!confirm("Remover este pedido da fila? Ele continua no Histórico.")) return;
+    setDoc(doc(db, "producao", id), { status: "removido" }, { merge: true })
+      .catch(e => toast("Erro: " + e.message));
+    renumerar(filaAtiva().filter(p => p.id !== id));
+  }
+  function renderProducao() {
+    const fila = filaAtiva();
+    $("p-fila").innerHTML = fila.length ? fila.map((p, idx) => `
+      <div class="card" style="${idx === 0 ? "border:2px solid #f97316" : ""}">
+        <div class="linha" style="justify-content:space-between">
+          <div class="linha" style="gap:10px;flex-wrap:nowrap">
+            <input type="number" min="1" value="${idx + 1}" data-pos="${p.id}" style="width:80px;margin:0" title="Trocar a posição">
+            <div>
+              <h2 style="margin:0">${esc(p.cliente)} ${idx === 0 ? '<span class="badge b-convertido">DA VEZ</span>' : ""}</h2>
+              <div class="mini">${esc(p.envio)}${p.dataDisp ? " · previsão " + esc(p.dataDisp) : ""}</div>
+            </div>
+          </div>
+          <div class="acoes">
+            ${idx === 0 ? "" : `<button class="azul" data-vez="${p.id}">Virar a da vez</button>`}
+            <button class="verde" data-fin="${p.id}">Finalizado</button>
+            <button class="perigo" data-rem-fila="${p.id}">Remover</button>
+          </div>
+        </div>
+        <div style="margin-top:8px">
+          ${(p.itens || []).map(i => `<div>${esc(i.qtd)}x ${esc(i.nome)}</div>`).join("")}
+        </div>
+        ${p._pend ? '<div class="pend mini">⏳ aguardando envio</div>' : ""}
+      </div>`).join("") : '<div class="card vazio">Nenhuma peça na fila de produção.</div>';
+
+    const jaNaFila = new Set(producao.filter(p => p.status !== "removido").map(p => p.orcamentoId));
+    const fora = orcamentos
+      .filter(o => (o.status === "convertido" || o.status === "vendido") && !jaNaFila.has(o.id))
+      .sort((a, b) => (b.criadoEm || 0) - (a.criadoEm || 0));
+    $("p-fora").innerHTML = fora.length ? fora.map(o => `
+      <div class="item">
+        <div><b>${esc(o.cliente)}</b><small>${(o.itens || []).map(i => esc(i.qtd) + "x " + esc(i.nome)).join(", ")}</small></div>
+        <button class="verde" data-enviar-fila="${o.id}">Enviar para fila</button>
+      </div>`).join("") : '<p class="vazio">Nenhum.</p>';
+  }
+
+  // ---------- BUSCA DE PEÇAS NO ORÇAMENTO ----------
+  function normalizar(t) {
+    return String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  }
+  function renderResultadoPeca() {
+    const box = $("o-resultado-peca");
+    if (!box) return;
+    const termos = normalizar($("o-busca-peca").value).split(/\s+/).filter(Boolean);
+    if (!termos.length) {
+      box.innerHTML = `<p class="mini">Digite parte do nome para buscar entre as ${pecas.length} peças salvas.</p>`;
+      return;
+    }
+    const achadas = pecas
+      .filter(p => { const n = normalizar(p.nome); return termos.every(t => n.includes(t)); })
+      .sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"));
+    if (!achadas.length) {
+      box.innerHTML = '<p class="mini">Nenhuma peça encontrada. Para uma peça avulsa, use o campo "Ou digite o nome".</p>';
+      return;
+    }
+    const mostrar = achadas.slice(0, 30);
+    const aviso = achadas.length > mostrar.length ? " (mostrando as 30 primeiras; digite mais para refinar)" : "";
+    box.innerHTML = `<p class="mini">${achadas.length} encontrada(s)${aviso}:</p>` + mostrar.map(p => `
+      <div class="item" style="padding:8px 0">
+        <div><b>${esc(p.nome)}</b> <small>${brl(p.precoVenda)}</small></div>
+        <div class="acoes"><button class="verde" data-add-busca="${p.id}">+ Adicionar</button></div>
+      </div>`).join("");
+  }
 
   // ---------- EVENTOS: PRECIFICAÇÃO ----------
   CAMPOS.forEach(([id]) => $(id).addEventListener("input", atualizarResumoPeca));
@@ -1069,11 +1193,17 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
     const preco = precoDaPeca($("o-item-nome").value.trim());
     if (preco !== null) $("o-item-valor").value = paraCampo(preco);
   });
-  $("o-item-select").addEventListener("change", () => {
-    const p = pecas.find(x => x.id === $("o-item-select").value);
+  $("o-busca-peca").addEventListener("input", renderResultadoPeca);
+  $("o-resultado-peca").addEventListener("click", e => {
+    const id = e.target.dataset.addBusca;
+    if (!id) return;
+    const p = pecas.find(x => x.id === id);
     if (!p) return;
-    $("o-item-nome").value = p.nome;
-    $("o-item-valor").value = paraCampo(p.precoVenda);
+    adicionarItem(p.nome, $("o-item-qtd").value, p.precoVenda);
+    $("o-busca-peca").value = "";
+    $("o-item-qtd").value = "1";
+    renderResultadoPeca();
+    toast(p.nome + " adicionada ao orçamento.");
   });
   $("o-item-add").onclick = adicionarItemDoForm;
   $("o-itens").addEventListener("input", e => {
@@ -1170,6 +1300,22 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
     } else if (d.excluirOrc) excluirOrcamento(d.excluirOrc);
   });
 
+  $("p-fila").addEventListener("change", e => {
+    const id = e.target.dataset.pos;
+    if (id) moverPara(id, e.target.value);
+  });
+  $("p-fila").addEventListener("click", e => {
+    const d = e.target.dataset;
+    if (d.vez) moverPara(d.vez, 1);
+    else if (d.fin) finalizarItem(d.fin);
+    else if (d.remFila) removerDaFila(d.remFila);
+  });
+  $("p-fora").addEventListener("click", e => {
+    const id = e.target.dataset.enviarFila;
+    if (!id) return;
+    const o = orcamentos.find(x => x.id === id);
+    if (o) enviarParaFila(o);
+  });
   window.addEventListener("online", atualizarStatus);
   window.addEventListener("offline", atualizarStatus);
 
