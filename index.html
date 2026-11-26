@@ -13,6 +13,8 @@
   body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: #111827; color: #e5e7eb; min-height: 100vh; }
   .hidden { display: none !important; }
   @media (max-width: 699px) { .pc-only { display: none !important; } }
+  .colunas { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  @media (min-width: 900px) { .colunas { grid-template-columns: repeat(3, 1fr); } }
   header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 20px; background: #1f2937; position: sticky; top: 0; z-index: 5; }
   h1 { font-size: 20px; margin: 0; color: #f97316; }
   h2 { font-size: 17px; margin: 0 0 12px; }
@@ -91,6 +93,7 @@
     <button data-aba="orcamento">Orçamento & WhatsApp</button>
     <button data-aba="pecas">Peças Salvas</button>
     <button data-aba="producao">Produção</button>
+    <button data-aba="estoque">Estoque</button>
     <button data-aba="fluxo">Fluxo de Caixa</button>
     <button data-aba="dashboard" class="pc-only">Dashboard</button>
     <button data-aba="historico">Histórico</button>
@@ -119,6 +122,7 @@
           </div>
           <button id="p-salvar">Salvar peça</button>
           <button id="p-orcamento" class="verde">+ Orçamento</button>
+          <button id="p-producao" class="azul">Enviar p/ produção</button>
           <button id="p-limpar" class="sec">Limpar</button>
         </div>
         <div class="card">
@@ -231,11 +235,35 @@
         <h2>Fila de produção</h2>
         <p class="mini">Orçamentos convertidos ou vendidos entram aqui sozinhos. O nº 1 é a peça da vez. Ao clicar em Finalizado, o pedido sai da lista e o próximo vira a peça da vez. Você também pode trocar o número de qualquer pedido.</p>
       </div>
+      <div id="alerta-filamento"></div>
       <div id="p-fila"></div>
       <div class="card">
         <h2>Convertidos ou vendidos fora da fila</h2>
         <p class="mini">Pedidos antigos que não entraram na fila. Clique para enviar.</p>
         <div id="p-fora"></div>
+      </div>
+    </section>
+
+    <!-- ESTOQUE DE FILAMENTO -->
+    <section id="aba-estoque" class="hidden">
+      <div class="card">
+        <h2 id="e-titulo">Cadastrar filamento</h2>
+        <div class="grid">
+          <label>Marca<input id="e-marca" placeholder="Ex: Voolt3D, Elegoo"></label>
+          <label>Material<select id="e-material"></select></label>
+          <label>Nome da cor<input id="e-corNome" placeholder="Ex: Branco Neve"></label>
+          <label>Cor (para identificar)<input id="e-cor" type="color" value="#ffffff" style="height:44px"></label>
+          <label>Peso do rolo (g)<input id="e-peso" inputmode="decimal" placeholder="1000"></label>
+          <label>Estoque atual (g)<input id="e-estoque" inputmode="decimal" placeholder="Ex: 850"></label>
+          <label>Custo por kg (R$)<input id="e-custo" inputmode="decimal" placeholder="Ex: 95"></label>
+          <label>Avisar quando chegar a (g)<input id="e-limite" inputmode="decimal" placeholder="150"></label>
+        </div>
+        <button id="e-salvar" class="verde">Salvar filamento</button>
+        <button id="e-cancelar" class="sec">Limpar</button>
+      </div>
+      <div class="card">
+        <h2>Estoque de filamento</h2>
+        <div id="e-lista"></div>
       </div>
     </section>
 
@@ -272,6 +300,20 @@
 
     <!-- DASHBOARD -->
     <section id="aba-dashboard" class="hidden pc-only">
+      <div class="card">
+        <div class="linha">
+          <button data-per="hoje" class="sec">Hoje</button>
+          <button data-per="7" class="sec">7 dias</button>
+          <button data-per="30" class="sec">30 dias</button>
+          <button data-per="custom" class="sec">Personalizado</button>
+        </div>
+        <div id="d-custom" class="linha hidden" style="margin-top:8px">
+          <label>De<input type="date" id="d-de"></label>
+          <label>Até<input type="date" id="d-ate"></label>
+          <button id="d-aplicar" class="verde">Aplicar</button>
+        </div>
+        <p class="mini" id="d-periodo"></p>
+      </div>
       <div class="cards" id="d-cards"></div>
       <div class="duas">
         <div class="card">
@@ -279,7 +321,7 @@
           <div id="d-ranking"></div>
         </div>
         <div class="card">
-          <h2>Vendas dos últimos 6 meses</h2>
+          <h2>Custos do período</h2>
           <div id="d-meses"></div>
         </div>
       </div>
@@ -315,6 +357,16 @@
     <p id="ms-erro" class="msg"></p>
     <button id="ms-ok">OK</button>
     <button id="ms-cancelar" class="sec">Cancelar</button>
+  </div>
+</div>
+<div id="modal-final" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:20">
+  <div class="card" style="max-width:420px;width:90%;margin:0">
+    <h2>Finalizar peça</h2>
+    <p id="mf-info" class="mini"></p>
+    <label>Filamento usado<select id="mf-fil"></select></label>
+    <label>Gramas usadas<input id="mf-g" inputmode="decimal"></label>
+    <button id="mf-ok" class="verde">Finalizar</button>
+    <button id="mf-cancel" class="sec">Cancelar</button>
   </div>
 </div>
 <div id="toast"></div>
@@ -373,7 +425,7 @@
   }
 
   // ---------- ESTADO ----------
-  let pecas = [], vendas = [], caixa = [], orcamentos = [], producao = [];
+  let pecas = [], vendas = [], caixa = [], orcamentos = [], producao = [], filamentos = [];
   let unsubs = [];
   let editId = null;
   let tipoFluxo = "entrada";
@@ -458,7 +510,7 @@
   function renderPecas() {
     const busca = $("pc-busca").value.trim().toLowerCase();
     const lista = pecas
-      .filter(p => (p.nome || "").toLowerCase().includes(busca))
+      .filter(p => buscaTolerante(p.nome, busca))
       .sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"));
     $("lista-pecas").innerHTML = lista.length ? lista.map(p => `
       <div class="item">
@@ -470,8 +522,9 @@
         <div class="dir">
           <b class="entrada">${brl(p.precoVenda)}</b>
           <div class="acoes">
-            <button class="sec" data-carregar="${p.id}">Carregar</button>
+            <button class="sec" data-carregar="${p.id}">Editar</button>
             <button class="verde" data-add-peca="${p.id}">+ Orçamento</button>
+            <button class="azul" data-prod-peca="${p.id}">Produção</button>
             <button class="perigo" data-excluir-peca="${p.id}">Excluir</button>
           </div>
         </div>
@@ -791,6 +844,7 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
           <div style="margin:10px 0">
             ${(o.itens || []).map(i => `<div>${esc(i.qtd)}x ${esc(i.nome)} <span class="mini">(${brl(i.preco)} un.)</span></div>`).join("")}
             ${o.desconto > 0 ? `<div class="mini">Desconto: -${brl(o.desconto)}</div>` : ""}
+            ${blocoVinculos(o)}
           </div>
           <div class="acoes" style="justify-content:flex-start">${botoes.join("")}</div>
         </div>`;
@@ -927,51 +981,6 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
   }
 
   // ---------- DASHBOARD ----------
-  function renderDashboard() {
-    const mes = mesAtual();
-    const totalGeral = vendas.reduce((s, v) => s + num(v.total), 0);
-    const vendidoMes = vendas.filter(v => String(v.data || "").startsWith(mes)).reduce((s, v) => s + num(v.total), 0);
-    const qtdVendas = vendas.length;
-    const ticket = qtdVendas ? totalGeral / qtdVendas : 0;
-    const enviados = orcamentos.filter(o => o.status !== "cancelado").length;
-    const vendidos = orcamentos.filter(o => o.status === "vendido").length;
-    const taxa = enviados ? Math.round(vendidos / enviados * 100) : 0;
-    const comCusto = vendas.filter(v => v.custoTotal !== undefined && v.custoTotal !== null);
-    const lucro = comCusto.reduce((s, v) => s + (num(v.total) - num(v.custoTotal)), 0);
-
-    $("d-cards").innerHTML = `
-      <div class="card"><div class="mini">Vendido neste mês</div><div class="numero entrada">${brl(vendidoMes)}</div></div>
-      <div class="card"><div class="mini">Vendido no total</div><div class="numero">${brl(totalGeral)}</div></div>
-      <div class="card"><div class="mini">Número de vendas</div><div class="numero">${qtdVendas}</div></div>
-      <div class="card"><div class="mini">Ticket médio</div><div class="numero">${brl(ticket)}</div></div>
-      <div class="card"><div class="mini">Orçamentos enviados</div><div class="numero">${enviados}</div></div>
-      <div class="card"><div class="mini">Taxa de conversão</div><div class="numero">${taxa}%</div><div class="mini">orçamentos que viraram venda</div></div>
-      <div class="card"><div class="mini">Lucro estimado</div><div class="numero">${brl(lucro)}</div><div class="mini">só vendas com custo cadastrado</div></div>`;
-
-    const mapa = {};
-    vendas.forEach(v => itensDe(v).forEach(i => {
-      const k = i.nome || "Sem nome";
-      mapa[k] = mapa[k] || { nome: k, qtd: 0, total: 0 };
-      mapa[k].qtd += num(i.qtd) || 1;
-      mapa[k].total += num(i.total) || 0;
-    }));
-    const ranking = Object.values(mapa).sort((a, b) => b.qtd - a.qtd).slice(0, 10);
-    $("d-ranking").innerHTML = ranking.length
-      ? ranking.map((r, idx) => `<div class="item"><div><b>${idx + 1}. ${esc(r.nome)}</b><small>${r.qtd} unidade(s)</small></div><b class="entrada">${brl(r.total)}</b></div>`).join("")
-      : '<p class="vazio">Ainda não há vendas.</p>';
-
-    const meses = [];
-    for (let k = 0; k < 6; k++) {
-      const d = new Date();
-      d.setDate(1);
-      d.setMonth(d.getMonth() - k);
-      const ym = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
-      const total = vendas.filter(v => String(v.data || "").startsWith(ym)).reduce((s, v) => s + num(v.total), 0);
-      meses.push({ ym, total, label: d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }) });
-    }
-    $("d-meses").innerHTML = meses.map(m => `<div class="item"><div><b style="text-transform:capitalize">${esc(m.label)}</b></div><b class="entrada">${brl(m.total)}</b></div>`).join("");
-  }
-
   // ---------- RENDER GERAL ----------
   function renderTudo() {
     renderPecas();
@@ -979,6 +988,8 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
     renderDashboard();
     renderHistorico();
     renderProducao();
+    renderEstoque();
+    renderAlertas();
     atualizarOrcamentoUI();
     atualizarStatus();
   }
@@ -1010,6 +1021,7 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
     unsubs.push(ouvir("caixa", d => caixa = d));
     unsubs.push(ouvir("orcamentos", d => orcamentos = d));
     unsubs.push(ouvir("producao", d => producao = d));
+    unsubs.push(ouvir("filamentos", d => filamentos = d));
     unsubs.push(onSnapshot(doc(db, "config", "seguranca"),
       snap => { senhaCfg = snap.exists() ? snap.data() : null; senhaCarregada = true; },
       err => toast("Não consegui carregar a senha mestra: " + err.message)));
@@ -1017,7 +1029,7 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
   function pararDados() {
     unsubs.forEach(u => u());
     unsubs = [];
-    pecas = []; vendas = []; caixa = []; orcamentos = []; producao = [];
+    pecas = []; vendas = []; caixa = []; orcamentos = []; producao = []; filamentos = [];
     senhaCfg = null; senhaCarregada = false;
   }
 
@@ -1055,7 +1067,7 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
   // ---------- ABAS ----------
   function showAba(nome) {
     document.querySelectorAll("nav button").forEach(b => b.classList.toggle("ativa", b.dataset.aba === nome));
-    ["precificacao", "orcamento", "pecas", "producao", "fluxo", "dashboard", "historico"].forEach(a => {
+    ["precificacao", "orcamento", "pecas", "producao", "estoque", "fluxo", "dashboard", "historico"].forEach(a => {
       $("aba-" + a).classList.toggle("hidden", a !== nome);
     });
     window.scrollTo({ top: 0 });
@@ -1063,9 +1075,11 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
   document.querySelectorAll("nav button").forEach(b => b.onclick = () => showAba(b.dataset.aba));
 
   // ---------- FILA DE PRODUÇÃO ----------
+  const STATUS_PROD = { fila: "Na fila", imprimindo: "Imprimindo", pronto: "Pronto" };
+  const ATIVOS = Object.keys(STATUS_PROD);
   function filaAtiva() {
     return producao
-      .filter(p => p.status === "fila")
+      .filter(p => ATIVOS.includes(p.status))
       .sort((a, b) => (a.posicao || 0) - (b.posicao || 0) || (a.criadoEm || 0) - (b.criadoEm || 0));
   }
   function renumerar(lista) {
@@ -1077,7 +1091,7 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
     });
   }
   function enviarParaFila(o) {
-    if (producao.some(p => p.orcamentoId === o.id && p.status === "fila")) return false;
+    if (producao.some(p => p.orcamentoId === o.id && ATIVOS.includes(p.status))) return false;
     setDoc(doc(collection(db, "producao")), {
       orcamentoId: o.id, cliente: o.cliente || "", itens: o.itens || [],
       envio: o.envio || "", dataDisp: o.dataDisp || "",
@@ -1095,41 +1109,56 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
     renumerar(lista);
     toast(`${item.cliente} agora é o nº ${pos}.`);
   }
-  function finalizarItem(id) {
-    setDoc(doc(db, "producao", id), { status: "finalizado", finalizadoEm: Date.now() }, { merge: true })
-      .catch(e => toast("Erro: " + e.message));
-    renumerar(filaAtiva().filter(p => p.id !== id));
-    toast("Finalizado. A próxima peça agora é a da vez.");
-  }
   function removerDaFila(id) {
     if (!confirm("Remover este pedido da fila? Ele continua no Histórico.")) return;
     setDoc(doc(db, "producao", id), { status: "removido" }, { merge: true })
       .catch(e => toast("Erro: " + e.message));
     renumerar(filaAtiva().filter(p => p.id !== id));
   }
+  function cardProducao(p, fila) {
+    const idx = fila.findIndex(x => x.id === p.id);
+    const vez = idx === 0;
+    const botoes = [];
+    if (!vez) botoes.push(`<button class="azul" data-vez="${p.id}">Virar a da vez</button>`);
+    if (p.status === "fila") botoes.push(`<button class="verde" data-iniciar="${p.id}">Iniciar impressão</button>`);
+    if (p.status === "imprimindo") botoes.push(`<button class="verde" data-pronto="${p.id}">Marcar pronto</button>`);
+    botoes.push(`<button class="sec" data-fin="${p.id}">Entregue</button>`);
+    botoes.push(`<button class="perigo" data-rem-fila="${p.id}">Remover</button>`);
+    return `
+      <div class="card" style="${vez ? "border:2px solid #f97316" : ""};margin-bottom:10px">
+        <div class="linha" style="gap:8px;flex-wrap:nowrap">
+          <input type="number" min="1" value="${idx + 1}" data-pos="${p.id}" style="width:70px;margin:0" title="Trocar a posição">
+          <div>
+            <b>${esc(p.cliente)}</b>${vez ? ' <span class="badge b-convertido">DA VEZ</span>' : ""}
+            <div class="mini">${esc(p.envio)}${p.dataDisp ? " · previsão " + esc(p.dataDisp) : ""}</div>
+          </div>
+        </div>
+        <div style="margin:6px 0">${(p.itens || []).map(i => `<div>${esc(i.qtd)}x ${esc(i.nome)}</div>`).join("")}</div>
+        ${linhaOrcamento(p)}
+        <div class="acoes" style="justify-content:flex-start">${botoes.join("")}</div>
+        ${p._pend ? '<div class="pend mini">⏳ aguardando envio</div>' : ""}
+      </div>`;
+  }
+  function mudarStatusProd(id, st) {
+    setDoc(doc(db, "producao", id), { status: st }, { merge: true })
+      .catch(e => toast("Erro: " + e.message));
+  }
   function renderProducao() {
     const fila = filaAtiva();
-    $("p-fila").innerHTML = fila.length ? fila.map((p, idx) => `
-      <div class="card" style="${idx === 0 ? "border:2px solid #f97316" : ""}">
-        <div class="linha" style="justify-content:space-between">
-          <div class="linha" style="gap:10px;flex-wrap:nowrap">
-            <input type="number" min="1" value="${idx + 1}" data-pos="${p.id}" style="width:80px;margin:0" title="Trocar a posição">
-            <div>
-              <h2 style="margin:0">${esc(p.cliente)} ${idx === 0 ? '<span class="badge b-convertido">DA VEZ</span>' : ""}</h2>
-              <div class="mini">${esc(p.envio)}${p.dataDisp ? " · previsão " + esc(p.dataDisp) : ""}</div>
-            </div>
+    const colunas = Object.keys(STATUS_PROD).map(st => {
+      const itens = fila.filter(p => p.status === st);
+      return `
+        <div class="card">
+          <div class="linha" style="justify-content:space-between">
+            <h2 style="margin:0">${STATUS_PROD[st]}</h2>
+            <span class="badge">${itens.length}</span>
           </div>
-          <div class="acoes">
-            ${idx === 0 ? "" : `<button class="azul" data-vez="${p.id}">Virar a da vez</button>`}
-            <button class="verde" data-fin="${p.id}">Finalizado</button>
-            <button class="perigo" data-rem-fila="${p.id}">Remover</button>
+          <div style="margin-top:10px">
+            ${itens.length ? itens.map(p => cardProducao(p, fila)).join("") : '<p class="vazio">Nenhum pedido aqui.</p>'}
           </div>
-        </div>
-        <div style="margin-top:8px">
-          ${(p.itens || []).map(i => `<div>${esc(i.qtd)}x ${esc(i.nome)}</div>`).join("")}
-        </div>
-        ${p._pend ? '<div class="pend mini">⏳ aguardando envio</div>' : ""}
-      </div>`).join("") : '<div class="card vazio">Nenhuma peça na fila de produção.</div>';
+        </div>`;
+    }).join("");
+    $("p-fila").innerHTML = `<div class="colunas">${colunas}</div>`;
 
     const jaNaFila = new Set(producao.filter(p => p.status !== "removido").map(p => p.orcamentoId));
     const fora = orcamentos
@@ -1142,9 +1171,333 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
       </div>`).join("") : '<p class="vazio">Nenhum.</p>';
   }
 
+  // ---------- ENVIAR PEÇA DO CATÁLOGO PARA PRODUÇÃO ----------
+  function enviarPecaParaProducao(nome, preco) {
+    const q = window.prompt(`Quantas unidades de "${nome}"?`, "1");
+    if (q === null) return;
+    const qtd = Math.max(1, Math.floor(num(q)) || 1);
+    const c = window.prompt("Nome do cliente (deixe em branco se for produção de estoque):", "");
+    if (c === null) return;
+    const cliente = c.trim() || "Produção de estoque";
+    setDoc(doc(collection(db, "producao")), {
+      orcamentoId: null, cliente,
+      itens: [{ nome, qtd, preco: round2(num(preco)) }],
+      envio: "", dataDisp: "", status: "fila",
+      posicao: filaAtiva().length + 1, criadoEm: Date.now()
+    }).catch(e => toast("Erro ao enviar para produção: " + e.message));
+    toast(`${qtd}x ${nome} enviada para a fila de produção.`);
+  }
+
+  // ---------- VÍNCULOS: orçamento, produção e venda ----------
+  function codigoOrc(id) { return "#" + String(id || "").slice(-5).toUpperCase(); }
+  function prodDoOrc(orcId) {
+    const ligados = producao.filter(p => p.orcamentoId === orcId && p.status !== "removido");
+    return ligados.find(p => ATIVOS.includes(p.status)) || ligados[0] || null;
+  }
+  function textoProd(p) {
+    if (!p) return "não enviada para produção";
+    if (p.status === "finalizado") return "Entregue";
+    return STATUS_PROD[p.status] || p.status;
+  }
+  function blocoVinculos(o) {
+    const p = prodDoOrc(o.id);
+    const v = o.vendaId ? vendas.find(x => x.id === o.vendaId) : null;
+    return `<div class="resumo" style="margin:8px 0 0">
+      <div>Produção: <b>${textoProd(p)}</b>${p ? ' <button class="sec" data-ver-prod="1" style="padding:4px 8px;font-size:12px;margin-top:0">Ver na produção</button>' : ""}</div>
+      <div>Venda: ${v ? `<b>${brl(v.total)}</b> em ${dataBR(v.data)}` : "<b>não registrada</b>"}</div>
+      <div class="mini">Código ${codigoOrc(o.id)}</div>
+    </div>`;
+  }
+  function linhaOrcamento(p) {
+    const o = orcamentos.find(x => x.id === p.orcamentoId);
+    if (!o) return "";
+    return `<div class="mini" style="margin:4px 0">Orçamento ${codigoOrc(o.id)} · ${brl(o.total)} · ${ROTULO[o.status] || o.status}
+      <button class="sec" data-ver-orc="${o.id}" style="padding:4px 8px;font-size:12px;margin-top:0">Ver orçamento</button></div>`;
+  }
+  function abrirOrcamento(id) {
+    const o = orcamentos.find(x => x.id === id);
+    if (o) {
+      $("h-busca").value = o.cliente || "";
+      $("h-status").value = "todos";
+      renderHistorico();
+    }
+    showAba("historico");
+  }
+
+  // ---------- BUSCA TOLERANTE (acentos, maiúsculas, plural e pequenos erros) ----------
+  function levenshtein(a, b) {
+    const m = a.length, n = b.length;
+    if (!m) return n;
+    if (!n) return m;
+    let prev = Array.from({ length: n + 1 }, (_, j) => j);
+    for (let i = 1; i <= m; i++) {
+      const cur = [i];
+      for (let j = 1; j <= n; j++) {
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      }
+      prev = cur;
+    }
+    return prev[n];
+  }
+  function raizPalavra(p) { return p.length > 3 && p.endsWith("s") ? p.slice(0, -1) : p; }
+  function palavraCasa(termo, nomeNorm) {
+    const t = raizPalavra(termo);
+    return nomeNorm.split(" ").filter(Boolean).some(w => {
+      const pw = raizPalavra(w);
+      if (pw.includes(t)) return true;
+      return t.length >= 4 && levenshtein(t, pw.slice(0, t.length)) <= 1;
+    });
+  }
+  function buscaTolerante(nome, termo) {
+    const termos = normalizar(termo).split(" ").filter(Boolean);
+    if (!termos.length) return true;
+    const n = normalizar(nome);
+    return termos.every(t => palavraCasa(t, n));
+  }
+
+  // ---------- ESTOQUE DE FILAMENTO ----------
+  const MATERIAIS = ["PLA", "PETG", "ABS", "ASA", "TPU", "Outro"];
+  let editFilId = null;
+  let dashPer = "30", dashDe = "", dashAte = "";
+  function nomeFilamento(f) {
+    return `${f.marca || ""} ${f.material || ""} ${f.corNome || ""}`.replace(/\s+/g, " ").trim();
+  }
+  function limiteDe(f) {
+    return f.limiteG === undefined || f.limiteG === null ? 150 : num(f.limiteG);
+  }
+  function alertaFilamento(f) {
+    return num(f.estoqueG) <= limiteDe(f);
+  }
+  function limparFormFil() {
+    editFilId = null;
+    $("e-titulo").textContent = "Cadastrar filamento";
+    ["e-marca", "e-corNome", "e-estoque", "e-custo", "e-limite", "e-peso"].forEach(id => $(id).value = "");
+    $("e-material").value = "PLA";
+    $("e-cor").value = "#ffffff";
+  }
+  function editarFilamento(f) {
+    editFilId = f.id;
+    $("e-titulo").textContent = "Editando: " + nomeFilamento(f);
+    $("e-marca").value = f.marca || "";
+    $("e-material").value = f.material || "PLA";
+    $("e-corNome").value = f.corNome || "";
+    $("e-cor").value = f.cor || "#ffffff";
+    $("e-peso").value = paraCampo(f.pesoRoloG ?? 1000);
+    $("e-estoque").value = paraCampo(f.estoqueG ?? 0);
+    $("e-custo").value = paraCampo(f.custoKg ?? "");
+    $("e-limite").value = paraCampo(limiteDe(f));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  function salvarFilamento() {
+    const corNome = $("e-corNome").value.trim();
+    if (!corNome) { toast("Digite o nome da cor."); return; }
+    const dados = {
+      marca: $("e-marca").value.trim(),
+      material: $("e-material").value,
+      corNome,
+      cor: $("e-cor").value,
+      pesoRoloG: num($("e-peso").value) || 1000,
+      estoqueG: num($("e-estoque").value),
+      custoKg: round2(num($("e-custo").value)),
+      limiteG: $("e-limite").value === "" ? 150 : num($("e-limite").value)
+    };
+    const ref = editFilId ? doc(db, "filamentos", editFilId) : doc(collection(db, "filamentos"));
+    setDoc(ref, dados, { merge: true }).catch(e => toast("Erro: " + e.message));
+    toast("Filamento salvo.");
+    limparFormFil();
+  }
+  function reporFilamento(f) {
+    const g = num(window.prompt(`Quantos gramas entraram em ${nomeFilamento(f)}?`, "1000"));
+    if (g <= 0) return;
+    setDoc(doc(db, "filamentos", f.id), { estoqueG: round2(num(f.estoqueG) + g) }, { merge: true })
+      .catch(e => toast("Erro: " + e.message));
+    toast("Estoque atualizado.");
+  }
+  function excluirFilamento(f) {
+    if (!confirm(`Excluir ${nomeFilamento(f)} do estoque?`)) return;
+    deleteDoc(doc(db, "filamentos", f.id)).catch(e => toast("Erro: " + e.message));
+  }
+  function renderEstoque() {
+    $("e-lista").innerHTML = filamentos.length ? filamentos
+      .slice().sort((a, b) => nomeFilamento(a).localeCompare(nomeFilamento(b), "pt-BR"))
+      .map(f => {
+        const rolo = num(f.pesoRoloG) || 1000;
+        const pct = Math.max(0, Math.min(100, Math.round(num(f.estoqueG) / rolo * 100)));
+        const alerta = alertaFilamento(f);
+        return `
+          <div class="item" style="align-items:flex-start">
+            <div style="display:flex;gap:12px;flex:1">
+              <span style="width:34px;height:34px;border-radius:50%;background:${esc(f.cor || "#888888")};border:2px solid #374151;flex:0 0 34px"></span>
+              <div style="flex:1">
+                <b>${esc(nomeFilamento(f))}</b>
+                <small>${rolo} g por rolo · ${brl(f.custoKg)} por kg</small>
+                <div style="background:#111827;border-radius:6px;height:8px;margin:6px 0;overflow:hidden"><div style="height:8px;width:${pct}%;background:${alerta ? "#f87171" : "#34d399"}"></div></div>
+                <small>${num(f.estoqueG)} g em estoque (${pct}%) · aviso abaixo de ${limiteDe(f)} g</small>
+              </div>
+            </div>
+            <div class="dir">
+              <span class="badge ${alerta ? "b-cancelado" : "b-convertido"}">${alerta ? "ACABANDO" : "OK"}</span>
+              <div class="acoes">
+                <button class="sec" data-fil-edit="${f.id}">Editar</button>
+                <button class="verde" data-fil-repor="${f.id}">Repor</button>
+                <button class="perigo" data-fil-del="${f.id}">Excluir</button>
+              </div>
+            </div>
+          </div>`;
+      }).join("") : '<p class="vazio">Nenhum filamento cadastrado ainda.</p>';
+  }
+  function renderAlertas() {
+    const acabando = filamentos.filter(alertaFilamento);
+    $("alerta-filamento").innerHTML = acabando.length
+      ? `<div class="card" style="border:2px solid #f87171"><b>⚠ Filamento acabando:</b> ${acabando.map(f => esc(nomeFilamento(f)) + " (" + num(f.estoqueG) + " g)").join(" · ")}</div>`
+      : "";
+  }
+
+  // ---------- FINALIZAR PEÇA (gasta filamento e registra energia) ----------
+  function estimarProducao(item) {
+    let gramas = 0, energia = 0, custoMaterial = 0, unidades = 0, maquina = 0, mao = 0, extras = 0;
+    (item.itens || []).forEach(i => {
+      const qtd = num(i.qtd) || 1;
+      unidades += qtd;
+      const p = pecas.find(x => normalizar(x.nome) === normalizar(i.nome));
+      if (!p) return;
+      const fator = 1 + num(p.taxaFalha) / 100;
+      const horas = num(p.tempoHoras) + num(p.tempoMinutos) / 60;
+      gramas += num(p.pesoG) * fator * qtd;
+      energia += (num(p.potenciaW) / 1000) * horas * num(p.valorKwh) * qtd;
+      maquina += num(p.horaMaquina) * horas * qtd;
+      mao += num(p.valorHoraMO) * num(p.minutosMO) / 60 * qtd;
+      extras += num(p.extras) * qtd;
+      custoMaterial += (num(p.pesoG) / 1000) * num(p.filamentoKg) * fator * qtd;
+    });
+    return { gramas, energia, custoMaterial, unidades, maquina, mao, extras };
+  }
+  function pedirFinalizacao(item, calc) {
+    return new Promise(resolve => {
+      const ativos = filamentos.slice().sort((a, b) => nomeFilamento(a).localeCompare(nomeFilamento(b), "pt-BR"));
+      $("mf-fil").innerHTML = '<option value="">— não usar estoque —</option>' +
+        ativos.map(f => `<option value="${f.id}">${esc(nomeFilamento(f))} — ${num(f.estoqueG)} g</option>`).join("");
+      $("mf-g").value = paraCampo(Math.round(calc.gramas * 10) / 10);
+      $("mf-info").innerHTML = `${esc(item.cliente)}: ${calc.unidades} unidade(s). Energia estimada: <b>${brl(calc.energia)}</b>.`;
+      $("modal-final").classList.remove("hidden");
+      const fechar = valor => {
+        $("modal-final").classList.add("hidden");
+        $("mf-ok").onclick = null;
+        $("mf-cancel").onclick = null;
+        resolve(valor);
+      };
+      $("mf-cancel").onclick = () => fechar(null);
+      $("mf-ok").onclick = () => fechar({ filamentoId: $("mf-fil").value || null, gramas: num($("mf-g").value) });
+    });
+  }
+  async function finalizarItem(id) {
+    const item = producao.find(p => p.id === id);
+    if (!item) return;
+    const calc = estimarProducao(item);
+    const escolha = await pedirFinalizacao(item, calc);
+    if (!escolha) return;
+    const f = filamentos.find(x => x.id === escolha.filamentoId);
+    const custoMaterial = f ? (num(f.custoKg) / 1000) * escolha.gramas : calc.custoMaterial;
+    setDoc(doc(db, "producao", id), {
+      status: "finalizado", finalizadoEm: Date.now(),
+      filamentoId: f ? f.id : null, filamentoNome: f ? nomeFilamento(f) : "",
+      gramasUsadas: round2(escolha.gramas), energiaCusto: round2(calc.energia),
+      custoMaterial: round2(custoMaterial), unidades: calc.unidades,
+      maquinaCusto: round2(calc.maquina), maoCusto: round2(calc.mao), extrasCusto: round2(calc.extras)
+    }, { merge: true }).catch(e => toast("Erro: " + e.message));
+    if (f && escolha.gramas > 0) {
+      const novo = round2(Math.max(0, num(f.estoqueG) - escolha.gramas));
+      setDoc(doc(db, "filamentos", f.id), { estoqueG: novo }, { merge: true })
+        .catch(e => toast("Erro no estoque: " + e.message));
+      if (alertaFilamento({ ...f, estoqueG: novo })) {
+        toast(`Atenção: ${nomeFilamento(f)} está acabando (${novo} g).`);
+      }
+    } else {
+      toast("Finalizado. A próxima peça agora é a da vez.");
+    }
+    renumerar(filaAtiva().filter(p => p.id !== id));
+  }
+
+  // ---------- DASHBOARD COM PERÍODO ----------
+  function intervaloDash() {
+    const hojeISO = hoje();
+    const diasAtras = n => {
+      const d = new Date();
+      d.setDate(d.getDate() - (n - 1));
+      return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    };
+    let ini = hojeISO, fim = hojeISO;
+    if (dashPer === "7") ini = diasAtras(7);
+    else if (dashPer === "30") ini = diasAtras(30);
+    else if (dashPer === "custom") {
+      ini = dashDe || hojeISO;
+      fim = dashAte || hojeISO;
+      if (fim < ini) { const t = ini; ini = fim; fim = t; }
+    }
+    return { ini, fim };
+  }
+  function renderDashboard() {
+    const { ini, fim } = intervaloDash();
+    const tIni = new Date(ini + "T00:00:00").getTime();
+    const tFim = new Date(fim + "T23:59:59").getTime();
+    document.querySelectorAll("[data-per]").forEach(b => b.className = b.dataset.per === dashPer ? "verde" : "sec");
+    $("d-custom").classList.toggle("hidden", dashPer !== "custom");
+    $("d-periodo").textContent = `Período: ${dataBR(ini)} a ${dataBR(fim)}`;
+
+    const vendasP = vendas.filter(v => String(v.data || "") >= ini && String(v.data || "") <= fim);
+    const finalizados = producao.filter(p => p.status === "finalizado" && p.finalizadoEm >= tIni && p.finalizadoEm <= tFim);
+    const faturamento = vendasP.reduce((s, v) => s + num(v.total), 0);
+    const custoMat = finalizados.reduce((s, p) => s + num(p.custoMaterial), 0);
+    const custoEn = finalizados.reduce((s, p) => s + num(p.energiaCusto), 0);
+    const custoMaq = finalizados.reduce((s, p) => s + num(p.maquinaCusto), 0);
+    const custoMao = finalizados.reduce((s, p) => s + num(p.maoCusto), 0);
+    const custoExt = finalizados.reduce((s, p) => s + num(p.extrasCusto), 0);
+    const custoTotal = custoMat + custoEn + custoMaq + custoMao + custoExt;
+    const lucro = faturamento - custoTotal;
+    const pecasFeitas = finalizados.reduce((s, p) => s + num(p.unidades), 0);
+    const ticket = vendasP.length ? faturamento / vendasP.length : 0;
+    const acabando = filamentos.filter(alertaFilamento).length;
+
+    $("d-cards").innerHTML = `
+      <div class="card"><div class="mini">Faturamento</div><div class="numero entrada">${brl(faturamento)}</div></div>
+      <div class="card"><div class="mini">Custo de material</div><div class="numero">${brl(custoMat)}</div></div>
+      <div class="card"><div class="mini">Custo de energia</div><div class="numero">${brl(custoEn)}</div></div>
+      <div class="card"><div class="mini">Hora da máquina</div><div class="numero">${brl(custoMaq)}</div></div>
+      <div class="card"><div class="mini">Mão de obra</div><div class="numero">${brl(custoMao)}</div></div>
+      <div class="card"><div class="mini">Custos extras</div><div class="numero">${brl(custoExt)}</div></div>
+      <div class="card"><div class="mini">Lucro estimado</div><div class="numero ${lucro < 0 ? "saida" : "entrada"}">${brl(lucro)}</div><div class="mini">faturamento menos todos os custos de produção</div></div>
+      <div class="card"><div class="mini">Peças produzidas</div><div class="numero">${pecasFeitas}</div></div>
+      <div class="card"><div class="mini">Vendas no período</div><div class="numero">${vendasP.length}</div><div class="mini">ticket médio ${brl(ticket)}</div></div>
+      <div class="card"><div class="mini">Filamentos acabando</div><div class="numero ${acabando ? "saida" : ""}">${acabando}</div></div>`;
+
+    const mapa = {};
+    vendasP.forEach(v => {
+      const itens = Array.isArray(v.itens) && v.itens.length ? v.itens : [{ nome: v.pecaNome || "Venda", qtd: v.qtd || 1, total: v.total }];
+      itens.forEach(i => {
+        const k = i.nome || "Sem nome";
+        mapa[k] = mapa[k] || { nome: k, qtd: 0, total: 0 };
+        mapa[k].qtd += num(i.qtd) || 1;
+        mapa[k].total += num(i.total) || 0;
+      });
+    });
+    const ranking = Object.values(mapa).sort((a, b) => b.qtd - a.qtd).slice(0, 10);
+    $("d-ranking").innerHTML = ranking.length
+      ? ranking.map((r, idx) => `<div class="item"><div><b>${idx + 1}. ${esc(r.nome)}</b><small>${r.qtd} unidade(s)</small></div><b class="entrada">${brl(r.total)}</b></div>`).join("")
+      : '<p class="vazio">Nenhuma venda no período.</p>';
+
+    const barra = (nome, valor) => {
+      const pct = custoTotal ? Math.round(valor / custoTotal * 100) : 0;
+      return `<div class="item" style="display:block"><div style="display:flex;justify-content:space-between"><b>${nome}</b><b>${brl(valor)} (${pct}%)</b></div>
+        <div style="background:#111827;border-radius:6px;height:8px;margin-top:6px;overflow:hidden"><div style="height:8px;width:${pct}%;background:#f97316"></div></div></div>`;
+    };
+    $("d-meses").innerHTML = custoTotal
+      ? barra("Material", custoMat) + barra("Energia elétrica", custoEn) + barra("Hora da máquina", custoMaq) + barra("Mão de obra", custoMao) + barra("Custos extras", custoExt)
+      : '<p class="vazio">Nenhuma peça finalizada no período.</p>';
+  }
+
   // ---------- BUSCA DE PEÇAS NO ORÇAMENTO ----------
   function normalizar(t) {
-    return String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    return String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   }
   function renderResultadoPeca() {
     const box = $("o-resultado-peca");
@@ -1155,7 +1508,7 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
       return;
     }
     const achadas = pecas
-      .filter(p => { const n = normalizar(p.nome); return termos.every(t => n.includes(t)); })
+      .filter(p => buscaTolerante(p.nome, $("o-busca-peca").value))
       .sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"));
     if (!achadas.length) {
       box.innerHTML = '<p class="mini">Nenhuma peça encontrada. Para uma peça avulsa, use o campo "Ou digite o nome".</p>';
@@ -1175,6 +1528,11 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
   $("p-nome").addEventListener("input", atualizarResumoPeca);
   $("p-salvar").onclick = salvarPeca;
   $("p-limpar").onclick = limparFormPeca;
+  $("p-producao").onclick = () => {
+    const p = lerFormPeca();
+    if (!p.nome) { toast("Digite o nome da peça."); return; }
+    enviarPecaParaProducao(p.nome, round2(calcularPeca(p).venda));
+  };
   $("p-orcamento").onclick = () => {
     const p = lerFormPeca();
     if (!p.nome) { toast("Digite o nome da peça."); return; }
@@ -1257,6 +1615,9 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
     } else if (t.dataset.addPeca) {
       const p = pecas.find(x => x.id === t.dataset.addPeca);
       if (p) { adicionarItem(p.nome, 1, p.precoVenda); showAba("orcamento"); toast("Peça adicionada ao orçamento."); }
+    } else if (t.dataset.prodPeca) {
+      const p = pecas.find(x => x.id === t.dataset.prodPeca);
+      if (p) enviarPecaParaProducao(p.nome, p.precoVenda);
     } else if (t.dataset.excluirPeca) {
       if (confirm("Excluir esta peça do catálogo? As vendas antigas continuam registradas.")) {
         deleteDoc(doc(db, "pecas", t.dataset.excluirPeca)).catch(e => toast("Erro: " + e.message));
@@ -1298,6 +1659,7 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
       if (o && o.status === "vendido") toast("Desfaça a venda antes de cancelar.");
       else if (confirm("Cancelar este orçamento?")) mudarStatus(d.cancelar, "cancelado");
     } else if (d.excluirOrc) excluirOrcamento(d.excluirOrc);
+    else if (d.verProd) showAba("producao");
   });
 
   $("p-fila").addEventListener("change", e => {
@@ -1307,7 +1669,10 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
   $("p-fila").addEventListener("click", e => {
     const d = e.target.dataset;
     if (d.vez) moverPara(d.vez, 1);
+    else if (d.iniciar) mudarStatusProd(d.iniciar, "imprimindo");
+    else if (d.pronto) mudarStatusProd(d.pronto, "pronto");
     else if (d.fin) finalizarItem(d.fin);
+    else if (d.verOrc) abrirOrcamento(d.verOrc);
     else if (d.remFila) removerDaFila(d.remFila);
   });
   $("p-fora").addEventListener("click", e => {
@@ -1316,6 +1681,18 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
     const o = orcamentos.find(x => x.id === id);
     if (o) enviarParaFila(o);
   });
+  $("e-salvar").onclick = salvarFilamento;
+  $("e-cancelar").onclick = limparFormFil;
+  $("e-lista").addEventListener("click", e => {
+    const d = e.target.dataset;
+    const f = filamentos.find(x => x.id === (d.filEdit || d.filRepor || d.filDel));
+    if (!f) return;
+    if (d.filEdit) editarFilamento(f);
+    else if (d.filRepor) reporFilamento(f);
+    else if (d.filDel) excluirFilamento(f);
+  });
+  document.querySelectorAll("[data-per]").forEach(b => b.onclick = () => { dashPer = b.dataset.per; renderDashboard(); });
+  $("d-aplicar").onclick = () => { dashDe = $("d-de").value; dashAte = $("d-ate").value; dashPer = "custom"; renderDashboard(); };
   window.addEventListener("online", atualizarStatus);
   window.addEventListener("offline", atualizarStatus);
 
@@ -1325,7 +1702,10 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
   renderItens();
   atualizarOrcamentoUI();
   marcarTipoFluxo("entrada");
-    showAba("precificacao");
+  $("e-material").innerHTML = MATERIAIS.map(m => `<option>${m}</option>`).join("");
+  $("d-de").value = hoje();
+  $("d-ate").value = hoje();
+  showAba("precificacao");
 </script>
 <script>
   // Modo offline (funciona no celular e no computador)
