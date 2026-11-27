@@ -14,7 +14,8 @@
   .hidden { display: none !important; }
   @media (max-width: 699px) { .pc-only { display: none !important; } }
   .colunas { display: grid; grid-template-columns: 1fr; gap: 12px; }
-  @media (min-width: 900px) { .colunas { grid-template-columns: repeat(3, 1fr); } }
+  @media (min-width: 700px) { .colunas { grid-template-columns: repeat(2, 1fr); } }
+  @media (min-width: 1100px) { .colunas { grid-template-columns: repeat(4, 1fr); } }
   header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 20px; background: #1f2937; position: sticky; top: 0; z-index: 5; }
   h1 { font-size: 20px; margin: 0; color: #f97316; }
   h2 { font-size: 17px; margin: 0 0 12px; }
@@ -1096,7 +1097,7 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
   document.querySelectorAll("nav button").forEach(b => b.onclick = () => showAba(b.dataset.aba));
 
   // ---------- FILA DE PRODUÇÃO ----------
-  const STATUS_PROD = { fila: "Na fila", imprimindo: "Imprimindo", pronto: "Pronto" };
+  const STATUS_PROD = { fila: "Na fila", imprimindo: "Imprimindo", pronto: "Pronto", pagamento: "Pagamento" };
   const ATIVOS = Object.keys(STATUS_PROD);
   function filaAtiva() {
     return producao
@@ -1136,15 +1137,36 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
       .catch(e => toast("Erro: " + e.message));
     renumerar(filaAtiva().filter(p => p.id !== id));
   }
+  function totalProd(p) {
+    const o = p.orcamentoId ? orcamentos.find(x => x.id === p.orcamentoId) : null;
+    if (o) return num(o.total);
+    return round2((p.itens || []).reduce((s, i) => s + (num(i.qtd) || 1) * num(i.preco), 0));
+  }
   function cardProducao(p, fila) {
     const idx = fila.findIndex(x => x.id === p.id);
     const vez = idx === 0;
     const botoes = [];
-    if (!vez) botoes.push(`<button class="azul" data-vez="${p.id}">Virar a da vez</button>`);
+    if (!vez && p.status !== "pagamento") botoes.push(`<button class="azul" data-vez="${p.id}">Virar a da vez</button>`);
     if (p.status === "fila") botoes.push(`<button class="verde" data-iniciar="${p.id}">Iniciar impressão</button>`);
     if (p.status === "imprimindo") botoes.push(`<button class="verde" data-pronto="${p.id}">Marcar pronto</button>`);
-    botoes.push(`<button class="sec" data-fin="${p.id}">Entregue</button>`);
+    if (p.status === "pronto") botoes.push(`<button class="azul" data-enviar-pag="${p.id}">Enviar p/ pagamento</button>`);
     botoes.push(`<button class="perigo" data-rem-fila="${p.id}">Remover</button>`);
+    let bloco = "";
+    if (p.status === "pagamento") {
+      const total = totalProd(p);
+      const pago = num(p.pagoParcial);
+      const formas = ["Pix", "Dinheiro", "Cartão", "Transferência", "Boleto", "Outro"];
+      bloco = `
+        <div class="resumo" style="margin:8px 0">Total: <b>${brl(total)}</b> · Pago até agora: <b>${brl(pago)}</b> · Falta: <b>${brl(Math.max(0, total - pago))}</b></div>
+        <div class="grid">
+          <label style="margin:0">Valor já pago (R$)<input type="text" inputmode="decimal" data-pagparc-input="${p.id}" value="${paraCampo(pago)}"></label>
+          <label style="margin:0">Forma de pagamento<select data-forma="${p.id}">${formas.map(f => `<option ${f === (p.formaPag || "Pix") ? "selected" : ""}>${f}</option>`).join("")}</select></label>
+        </div>
+        <div class="acoes" style="justify-content:flex-start">
+          <button class="sec" data-salvar-parc="${p.id}">Salvar valor pago</button>
+          <button class="verde" data-marcar-pago="${p.id}">Pago ✓ (enviar ao caixa)</button>
+        </div>`;
+    }
     return `
       <div class="card" style="${vez ? "border:2px solid #f97316" : ""};margin-bottom:10px">
         <div class="linha" style="gap:8px;flex-wrap:nowrap">
@@ -1156,9 +1178,56 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
         </div>
         <div style="margin:6px 0">${(p.itens || []).map(i => `<div>${esc(i.qtd)}x ${esc(i.nome)}</div>`).join("")}</div>
         ${linhaOrcamento(p)}
+        ${bloco}
         <div class="acoes" style="justify-content:flex-start">${botoes.join("")}</div>
         ${p._pend ? '<div class="pend mini">⏳ aguardando envio</div>' : ""}
       </div>`;
+  }
+  function salvarParcialProd(id) {
+    const input = document.querySelector(`[data-pagparc-input="${id}"]`);
+    if (!input) return;
+    const p = producao.find(x => x.id === id);
+    const total = p ? totalProd(p) : 0;
+    let valor = num(input.value);
+    if (valor < 0) valor = 0;
+    if (valor > total) { toast("O valor pago não pode ser maior que o total."); return; }
+    setDoc(doc(db, "producao", id), { pagoParcial: round2(valor) }, { merge: true })
+      .catch(e => toast("Erro: " + e.message));
+    toast("Valor pago salvo. Ainda não foi para o caixa.");
+  }
+  function registrarVendaDaProducao(p, forma) {
+    const total = totalProd(p);
+    const orc = p.orcamentoId ? orcamentos.find(x => x.id === p.orcamentoId) : null;
+    const existente = orc && orc.vendaId ? vendas.find(x => x.id === orc.vendaId) : null;
+    let vendaId;
+    if (existente) {
+      const log = (existente.pagamentos || []).slice();
+      log.push({ valor: round2(total - recebidoDe(existente)), recebidoAte: total, forma, data: hoje() });
+      setDoc(doc(db, "vendas", existente.id), { recebido: total, formaPag: forma, pagamentos: log }, { merge: true })
+        .catch(e => toast("Erro no caixa: " + e.message));
+      vendaId = existente.id;
+    } else {
+      const itens = (p.itens || []).map(i => {
+        const qtd = num(i.qtd) || 1;
+        return { nome: i.nome, qtd, valorUnit: num(i.preco), total: round2(qtd * num(i.preco)), custoUnit: custoDaPeca(i.nome) };
+      });
+      const todosCusto = itens.length && itens.every(i => i.custoUnit !== null);
+      const custoTotal = todosCusto ? round2(itens.reduce((s, i) => s + i.custoUnit * i.qtd, 0)) : null;
+      const ref = doc(collection(db, "vendas"));
+      vendaId = ref.id;
+      setDoc(ref, {
+        origem: orc ? "orcamento" : "producao", orcamentoId: p.orcamentoId || null,
+        cliente: p.cliente || "Cliente", itens, total, custoTotal,
+        data: hoje(), criadoEm: Date.now(), recebido: total, formaPag: forma,
+        pagamentos: [{ valor: total, recebidoAte: total, forma, data: hoje() }]
+      }).catch(e => toast("Erro no caixa: " + e.message));
+      if (orc) {
+        setDoc(doc(db, "orcamentos", orc.id), { status: "vendido", vendaId }, { merge: true })
+          .catch(e => toast("Erro: " + e.message));
+      }
+    }
+    setDoc(doc(db, "producao", p.id), { vendaId, pagoEm: Date.now(), formaPag: forma }, { merge: true })
+      .catch(e => toast("Erro: " + e.message));
   }
   function mudarStatusProd(id, st) {
     setDoc(doc(db, "producao", id), { status: st }, { merge: true })
@@ -1500,7 +1569,7 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
       $("mf-ok").onclick = () => fechar({ filamentoId: $("mf-fil").value || null, gramas: num($("mf-g").value) });
     });
   }
-  async function finalizarItem(id) {
+  async function finalizarItem(id, comPagamento = false) {
     const item = producao.find(p => p.id === id);
     if (!item) return;
     const calc = estimarProducao(item);
@@ -1525,6 +1594,7 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
     } else {
       toast("Finalizado. A próxima peça agora é a da vez.");
     }
+    if (comPagamento) registrarVendaDaProducao(item, item.formaPag || "Pix");
     renumerar(filaAtiva().filter(p => p.id !== id));
   }
 
@@ -1780,13 +1850,16 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
   $("p-fila").addEventListener("change", e => {
     const id = e.target.dataset.pos;
     if (id) moverPara(id, e.target.value);
+    if (e.target.dataset.forma) setDoc(doc(db, "producao", e.target.dataset.forma), { formaPag: e.target.value }, { merge: true });
   });
   $("p-fila").addEventListener("click", e => {
     const d = e.target.dataset;
     if (d.vez) moverPara(d.vez, 1);
     else if (d.iniciar) mudarStatusProd(d.iniciar, "imprimindo");
     else if (d.pronto) mudarStatusProd(d.pronto, "pronto");
-    else if (d.fin) finalizarItem(d.fin);
+    else if (d.enviarPag) mudarStatusProd(d.enviarPag, "pagamento");
+    else if (d.marcarPago) finalizarItem(d.marcarPago, true);
+    else if (d.salvarParc) salvarParcialProd(d.salvarParc);
     else if (d.verOrc) abrirOrcamento(d.verOrc);
     else if (d.remFila) removerDaFila(d.remFila);
   });
