@@ -959,9 +959,9 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
     const mes = $("f-mes").value || mesAtual();
     const vendasMes = vendas.filter(v => String(v.data || "").startsWith(mes));
     const caixaMes = caixa.filter(c => String(c.data || "").startsWith(mes));
-    const entradas = vendasMes.reduce((s, v) => s + recebidoDe(v), 0) + caixaMes.filter(c => c.tipo === "entrada").reduce((s, c) => s + num(c.valor), 0);
+    const entradas = vendasMes.filter(v => valorCaixa(v) > 0).reduce((s, v) => s + valorCaixa(v), 0) + caixaMes.filter(c => c.tipo === "entrada").reduce((s, c) => s + num(c.valor), 0);
     const saidas = caixaMes.filter(c => c.tipo === "saida").reduce((s, c) => s + num(c.valor), 0);
-    const totalGeral = vendas.reduce((s, v) => s + recebidoDe(v), 0)
+    const totalGeral = vendas.reduce((s, v) => s + valorCaixa(v), 0)
       + caixa.filter(c => c.tipo === "entrada").reduce((s, c) => s + num(c.valor), 0)
       - caixa.filter(c => c.tipo === "saida").reduce((s, c) => s + num(c.valor), 0);
     $("f-entradas").textContent = brl(entradas);
@@ -970,10 +970,10 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
     $("f-saldo-geral").textContent = brl(totalGeral);
 
     const movimentos = [
-      ...vendasMes.map(v => ({
+      ...vendasMes.filter(v => valorCaixa(v) > 0).map(v => ({
         id: v.id, tipo: "venda", data: v.data, criadoEm: v.criadoEm || 0,
         descricao: (v.origem === "orcamento" ? "Venda (orçamento): " : "Venda: ") + (v.cliente || itensDe(v).map(i => i.nome).join(", ")),
-        valor: recebidoDe(v), pend: v._pend, origem: v.origem, statusPag: statusPagTexto(v)
+        valor: valorCaixa(v), pend: v._pend, origem: v.origem, statusPag: statusPagTexto(v)
       })),
       ...caixaMes.map(c => ({
         id: c.id, tipo: c.tipo, data: c.data, criadoEm: c.criadoEm || 0,
@@ -1012,6 +1012,8 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
     renderProducao();
     renderEstoque();
     renderAlertas();
+    renderPendentes();
+    renderVendasPagas();
     atualizarOrcamentoUI();
     atualizarStatus();
   }
@@ -1138,6 +1140,7 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
     renumerar(filaAtiva().filter(p => p.id !== id));
   }
   function totalProd(p) {
+    if (p.valorCombinado !== undefined && p.valorCombinado !== null) return num(p.valorCombinado);
     const o = p.orcamentoId ? orcamentos.find(x => x.id === p.orcamentoId) : null;
     if (o) return num(o.total);
     return round2((p.itens || []).reduce((s, i) => s + (num(i.qtd) || 1) * num(i.preco), 0));
@@ -1341,7 +1344,7 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
   }
   function renderGraficos(vendasP, ini, fim) {
     const total = vendasP.reduce((s, v) => s + num(v.total), 0);
-    const recebido = vendasP.reduce((s, v) => s + recebidoDe(v), 0);
+    const recebido = vendasP.reduce((s, v) => s + valorCaixa(v), 0);
     const aReceber = Math.max(0, total - recebido);
     $("d-pag").innerHTML = total
       ? barraHorizontal([["Recebido", recebido, "#34d399"], ["A receber", aReceber, "#f87171"]])
@@ -1365,6 +1368,125 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
     $("d-grafico").innerHTML = valores.some(v => v > 0)
       ? graficoColunas(labels, valores)
       : '<p class="vazio">Nenhuma venda no período.</p>';
+  }
+
+  // ---------- PAGAMENTOS PENDENTES (no fim do Fluxo de Caixa) ----------
+  const FORMAS = ["Pix", "Dinheiro", "Cartão", "Transferência", "Boleto", "Outro"];
+  function valorCaixa(v) {
+    return recebidoDe(v) >= num(v.total) - 0.001 ? num(v.total) : 0;
+  }
+  function valorCatalogo(itens) {
+    let total = 0, achou = false;
+    (itens || []).forEach(i => {
+      const p = pecas.find(x => normalizar(x.nome) === normalizar(i.nome));
+      if (p) { total += num(p.precoVenda) * (num(i.qtd) || 1); achou = true; }
+    });
+    return achou ? round2(total) : null;
+  }
+  function cardPend(kind, id, titulo, sub, total, pago, forma, cat, badge) {
+    const falta = Math.max(0, total - pago);
+    return `
+      <div class="card" data-pend-card data-kind="${kind}" data-id="${id}" style="margin-bottom:10px">
+        <div class="linha" style="justify-content:space-between">
+          <div><b>${esc(titulo)}</b><div class="mini">${sub}</div></div>
+          <span class="badge">${badge}</span>
+        </div>
+        <div class="resumo" style="margin:8px 0">
+          Valor da peça no catálogo: <b>${cat === null ? "não cadastrada" : brl(cat)}</b>
+          ${cat !== null ? `<button class="sec" data-usar-cat="${cat}" style="padding:4px 8px;font-size:12px;margin:0 0 0 8px">Usar este valor</button>` : ""}
+        </div>
+        <div class="grid">
+          <label style="margin:0">Valor combinado (R$)<input type="text" inputmode="decimal" data-val value="${paraCampo(total)}"></label>
+          <label style="margin:0">Já pago (R$)<input type="text" inputmode="decimal" data-pago value="${paraCampo(pago)}"></label>
+          <label style="margin:0">Forma de pagamento<select data-forma-pend>${FORMAS.map(f => `<option ${f === forma ? "selected" : ""}>${f}</option>`).join("")}</select></label>
+          <div class="mini" style="align-self:end">Falta receber: <b>${brl(falta)}</b></div>
+        </div>
+        <div class="acoes" style="justify-content:flex-start">
+          <button class="sec" data-salvar-pend>Salvar valores</button>
+          <button class="verde" data-pago-total>Pago total ✓</button>
+        </div>
+      </div>`;
+  }
+  function renderPendentes() {
+    const box = $("f-pend");
+    if (!box) return;
+    const ativosProd = producao.filter(p => ATIVOS.includes(p.status));
+    const vendaLigada = new Set(ativosProd.map(p => p.vendaId).filter(Boolean));
+    const orcLigado = new Set(ativosProd.map(p => p.orcamentoId).filter(Boolean));
+    const cardsProd = ativosProd.map(p => {
+      const total = totalProd(p), pago = num(p.pagoParcial);
+      const badge = pago >= total && total > 0 ? "Pago" : pago > 0 ? "Parcial" : "A receber";
+      const sub = (p.itens || []).map(i => esc(i.qtd) + "x " + esc(i.nome)).join(" · ") + " · " + STATUS_PROD[p.status];
+      return cardPend("prod", p.id, p.cliente || "Cliente", sub, total, pago, p.formaPag || "Pix", valorCatalogo(p.itens), badge);
+    });
+    const pendentes = vendas.filter(v => recebidoDe(v) < num(v.total) - 0.001
+      && !vendaLigada.has(v.id) && !(v.orcamentoId && orcLigado.has(v.orcamentoId)));
+    const cardsVenda = pendentes.map(v => {
+      const total = num(v.total), pago = recebidoDe(v);
+      const nome = v.cliente || (v.itens || []).map(i => i.nome).join(", ") || v.pecaNome || "Venda";
+      const sub = (v.itens || []).map(i => esc(i.qtd) + "x " + esc(i.nome)).join(" · ") + " · venda de " + dataBR(v.data);
+      const badge = pago > 0 ? "Parcial" : "A receber";
+      return cardPend("venda", v.id, nome, sub, total, pago, v.formaPag || "Pix", valorCatalogo(v.itens), badge);
+    });
+    box.innerHTML = [...cardsProd, ...cardsVenda].join("") || '<p class="vazio">Nenhum pagamento pendente.</p>';
+  }
+  function lerPend(card) {
+    return {
+      val: num(card.querySelector("[data-val]").value),
+      pago: num(card.querySelector("[data-pago]").value),
+      forma: card.querySelector("[data-forma-pend]").value
+    };
+  }
+  function salvarPendente(card) {
+    const kind = card.dataset.kind, id = card.dataset.id;
+    const { val, pago, forma } = lerPend(card);
+    if (val <= 0) { toast("Informe o valor combinado."); return; }
+    if (pago > val) { toast("O valor pago não pode ser maior que o valor combinado."); return; }
+    if (kind === "prod") {
+      setDoc(doc(db, "producao", id), { valorCombinado: round2(val), pagoParcial: round2(pago), formaPag: forma }, { merge: true })
+        .catch(e => toast("Erro: " + e.message));
+    } else {
+      const v = vendas.find(x => x.id === id);
+      if (!v) return;
+      const anterior = recebidoDe(v);
+      const log = (v.pagamentos || []).slice();
+      if (round2(pago) !== round2(anterior)) log.push({ valor: round2(pago - anterior), recebidoAte: round2(pago), forma, data: hoje() });
+      setDoc(doc(db, "vendas", id), { total: round2(val), recebido: round2(pago), formaPag: forma, pagamentos: log }, { merge: true })
+        .catch(e => toast("Erro: " + e.message));
+    }
+    toast("Valores salvos.");
+  }
+  function pagoTotalPendente(card) {
+    const kind = card.dataset.kind, id = card.dataset.id;
+    const { val, forma } = lerPend(card);
+    if (kind === "prod") {
+      const p = producao.find(x => x.id === id);
+      if (!p) return;
+      if (round2(val) !== round2(totalProd(p))) { toast("Clique em Salvar valores antes de marcar como pago."); return; }
+      if ((p.formaPag || "Pix") !== forma) { toast("Clique em Salvar valores antes de marcar como pago."); return; }
+      finalizarItem(id, true);
+    } else {
+      const v = vendas.find(x => x.id === id);
+      if (!v) return;
+      if (round2(val) !== round2(num(v.total))) { toast("Clique em Salvar valores antes de marcar como pago."); return; }
+      const log = (v.pagamentos || []).slice();
+      log.push({ valor: round2(num(v.total) - recebidoDe(v)), recebidoAte: round2(num(v.total)), forma, data: hoje() });
+      setDoc(doc(db, "vendas", id), { recebido: round2(num(v.total)), formaPag: forma, pagamentos: log }, { merge: true })
+        .catch(e => toast("Erro: " + e.message));
+      toast("Pago total. Venda enviada para o Histórico.");
+    }
+  }
+  function renderVendasPagas() {
+    const box = $("h-pagas");
+    if (!box) return;
+    const pagas = vendas
+      .filter(v => num(v.total) > 0 && recebidoDe(v) >= num(v.total) - 0.001)
+      .sort((a, b) => (b.criadoEm || 0) - (a.criadoEm || 0));
+    box.innerHTML = pagas.length ? pagas.map(v => {
+      const ultimo = (v.pagamentos || []).slice(-1)[0];
+      const nome = v.cliente || (v.itens || []).map(i => i.nome).join(", ") || v.pecaNome || "Venda";
+      return `<div class="item"><div><b>${esc(nome)}</b><small>${dataBR(v.data)} · ${esc(v.formaPag || (ultimo && ultimo.forma) || "")}</small></div><b class="entrada">${brl(v.total)}</b></div>`;
+    }).join("") : '<p class="vazio">Nenhuma venda paga ainda.</p>';
   }
 
   // ---------- VÍNCULOS: orçamento, produção e venda ----------
@@ -1647,7 +1769,7 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
       <div class="card"><div class="mini">Custos extras</div><div class="numero">${brl(custoExt)}</div></div>
       <div class="card"><div class="mini">Lucro estimado</div><div class="numero ${lucro < 0 ? "saida" : "entrada"}">${brl(lucro)}</div><div class="mini">faturamento menos todos os custos de produção</div></div>
       <div class="card"><div class="mini">Peças produzidas</div><div class="numero">${pecasFeitas}</div></div>
-      <div class="card"><div class="mini">Recebido no período</div><div class="numero entrada">${brl(vendasP.reduce((s, v) => s + recebidoDe(v), 0))}</div></div>
+      <div class="card"><div class="mini">Recebido no período</div><div class="numero entrada">${brl(vendasP.reduce((s, v) => s + valorCaixa(v), 0))}</div></div>
       <div class="card"><div class="mini">A receber no período</div><div class="numero ${vendasP.some(v => recebidoDe(v) < num(v.total)) ? "saida" : ""}">${brl(vendasP.reduce((s, v) => s + Math.max(0, num(v.total) - recebidoDe(v)), 0))}</div></div>
       <div class="card"><div class="mini">Vendas no período</div><div class="numero">${vendasP.length}</div><div class="mini">ticket médio ${brl(ticket)}</div></div>
       <div class="card"><div class="mini">Filamentos acabando</div><div class="numero ${acabando ? "saida" : ""}">${acabando}</div></div>`;
@@ -1892,6 +2014,16 @@ Para confirmar o pedido ou tirar dúvidas, estamos à disposição!${linhaFlerte
   renderItens();
   atualizarOrcamentoUI();
   marcarTipoFluxo("entrada");
+  $("aba-fluxo").insertAdjacentHTML("beforeend", '<div class="card"><h2>Pagamentos pendentes</h2><p class="mini">Peças em produção e vendas ainda não pagas inteiramente. Só saem daqui quando o pagamento estiver completo e então vão para o Histórico.</p><div id="f-pend"></div></div>');
+  $("aba-historico").insertAdjacentHTML("beforeend", '<div class="card"><h2>Vendas pagas</h2><div id="h-pagas"></div></div>');
+  $("f-pend").addEventListener("click", e => {
+    const t = e.target;
+    const card = t.closest("[data-pend-card]");
+    if (!card) return;
+    if (t.dataset.usarCat !== undefined) { card.querySelector("[data-val]").value = paraCampo(num(t.dataset.usarCat)); return; }
+    if (t.hasAttribute("data-salvar-pend")) salvarPendente(card);
+    if (t.hasAttribute("data-pago-total")) pagoTotalPendente(card);
+  });
   $("e-material").innerHTML = MATERIAIS.map(m => `<option>${m}</option>`).join("");
   $("d-de").value = hoje();
   $("d-ate").value = hoje();
